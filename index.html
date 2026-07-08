@@ -109,10 +109,10 @@
     </div>
 
 <script>
-    // 요청하신 URL과 키 적용 완료
+    // 변수명 충돌을 피하기 위해 supabaseClient 로 변경
     const SUPABASE_URL = "https://qjdtojpcprbngcxoyogd.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZHRvanBjcHJibmdjeG95b2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MTA4NzMsImV4cCI6MjA5OTA4Njg3M30.Hcwewr7vDaza0XEtLrgg_vMA6ym9wSSBVcCnoqSiSNQ";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let userProfile = null;
     const MAX_PARTICIPANTS = 64;
@@ -143,12 +143,10 @@
             userProfile = JSON.parse(storedData);
             activateUserPanel();
         } else {
-            // 유저 정보가 없으면 모달 창 띄우기
             document.getElementById('join-modal').style.display = "flex";
         }
     }
 
-    // 모달창에서 등록 버튼을 눌렀을 때 실행
     async function registerUser() {
         const rName = document.getElementById('reg-name').value.trim();
         const rTier = document.getElementById('reg-tier').value;
@@ -174,7 +172,7 @@
             team_name: null 
         };
 
-        await supabase.from('participants').insert([userProfile]);
+        await supabaseClient.from('participants').insert([userProfile]);
         localStorage.setItem('ggmh_user', JSON.stringify(userProfile));
         
         document.getElementById('join-modal').style.display = "none";
@@ -187,7 +185,7 @@
     }
 
     async function loadParticipantsData() {
-        const { data } = await supabase.from('participants').select('*').order('created_at', { ascending: true });
+        const { data } = await supabaseClient.from('participants').select('*').order('created_at', { ascending: true });
         if (!data) return;
 
         initGrid();
@@ -221,7 +219,7 @@
 
         inputObj.disabled = true;
 
-        await supabase.from('auction_bids').insert([{
+        await supabaseClient.from('auction_bids').insert([{
             p_token: userProfile.p_token,
             real_name: userProfile.real_name,
             fake_name: userProfile.fake_name,
@@ -234,7 +232,7 @@
     }
 
     async function loadExistingBids() {
-        const { data } = await supabase.from('auction_bids').select('*').order('created_at', { ascending: false });
+        const { data } = await supabaseClient.from('auction_bids').select('*').order('created_at', { ascending: false });
         if (data) {
             const list = document.getElementById('bid-list');
             list.innerHTML = "";
@@ -278,14 +276,14 @@
     }
 
     function subscribeRealtime() {
-        supabase.channel('bids-channel')
+        supabaseClient.channel('bids-channel')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'auction_bids' }, 
             payload => {
                 const list = document.getElementById('bid-list');
                 appendBid(payload.new, list);
             }).subscribe();
 
-        supabase.channel('teams-channel')
+        supabaseClient.channel('teams-channel')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, 
             payload => {
                 loadParticipantsData();
