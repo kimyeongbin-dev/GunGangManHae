@@ -3,334 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GunGangManHae - 배틀그라운드 팀 경매</title>
+    <title>건강만해 - 배틀그라운드 팀 경매</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; max-width: 1200px; margin: 30px auto; padding: 20px; background-color: #1e1e24; color: #fff; }
-        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #f39c12; padding-bottom: 10px; }
-        .header h1 { margin: 0; color: #f39c12; letter-spacing: 2px; }
-        .box { background: #2b2b36; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+        .admin-panel { display: flex; gap: 10px; }
+        .admin-panel input { padding: 5px; background: #222; border: 1px solid #555; color: #fff; }
+        .admin-panel button { padding: 5px 15px; background: #4caf50; border: none; color: white; cursor: pointer; font-weight: bold; }
+        .container { display: flex; gap: 20px; height: calc(100vh - 100px); }
         
-        /* 모달 공통 스타일 */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { background: #2b2b36; padding: 30px; border-radius: 8px; width: 400px; border: 2px solid #f39c12; position: relative; }
-        .modal-content input, .modal-content select { width: 100%; padding: 10px; margin-bottom: 15px; border: none; border-radius: 4px; box-sizing: border-box; background: #fff; font-family: inherit; }
-        .modal-content button { width: 100%; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; margin-bottom: 10px; }
-        .btn-primary { background: #f39c12; color: #1e1e24; }
-        .btn-danger { background: #e74c3c; color: #fff; }
-        .btn-cancel { background: #7f8c8d; color: #fff; }
-        .close-btn { position: absolute; top: 15px; right: 20px; color: #aaa; cursor: pointer; font-size: 20px; font-weight: bold; }
-        .close-btn:hover { color: #fff; }
+        /* 좌측: 엔트리 테이블 */
+        .left-panel { flex: 6; background: #1e1e1e; padding: 15px; border-radius: 8px; overflow-y: auto; }
+        .table-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .tier-header { text-align: center; font-weight: bold; padding: 10px; background: #333; border-radius: 4px; }
+        .cell { background: #2a2a2a; border: 1px solid #444; border-radius: 4px; min-height: 50px; display: flex; justify-content: space-between; align-items: center; padding: 10px; font-size: 14px; }
+        .cell-empty { background: transparent; border: 1px dashed #444; min-height: 50px; }
+        .delete-btn { background: #ff4c4c; border: none; color: white; cursor: pointer; border-radius: 3px; padding: 2px 6px; font-size: 12px; display: none; }
+        .admin-mode .delete-btn { display: inline-block; }
 
-        /* 8x8 참가자 그리드 레이아웃 */
-        .grid-container { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; margin-top: 15px; }
-        .grid-cell { background-color: #3a3a48; border: 1px solid #444; border-radius: 4px; aspect-ratio: 16 / 9; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px; box-sizing: border-box; overflow: hidden; cursor: pointer; transition: 0.2s; }
-        .grid-cell:hover { border-color: #aaa; background-color: #4a4a5a; }
-        .grid-cell.active { border-color: #f39c12; background-color: #2e2e3a; }
-        .grid-cell.active:hover { background-color: #3e3e4a; }
-        .grid-cell.teamed { border-color: #2ecc71; background-color: #1e3a29; }
-        .grid-cell.teamed:hover { background-color: #2e4a39; }
-        
-        .cell-name { font-weight: bold; color: #f39c12; font-size: 13px; margin-bottom: 2px; }
-        .cell-stats { font-size: 11px; color: #aaa; margin-bottom: 4px; }
-        .cell-intro { font-size: 10px; color: #888; font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; }
-        .team-label { color: #2ecc71; font-weight: bold; font-size: 11px; margin-top: 4px; }
-        
-        /* 4x4 완성된 팀 그리드 레이아웃 */
-        .team-grid-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
-        .team-cell { background-color: #3a3a48; border: 1px solid #444; border-radius: 6px; padding: 15px; min-height: 100px; display: flex; flex-direction: column; }
-        .team-cell.empty { align-items: center; justify-content: center; color: #777; font-size: 14px; background-color: #2a2a35; }
-        .team-cell.active { border-color: #2ecc71; background-color: #1e2a22; }
-        
-        .team-title { margin-top: 0; margin-bottom: 10px; color: #2ecc71; font-size: 16px; border-bottom: 1px solid #334; padding-bottom: 5px; }
-        .team-member { display: inline-block; background: #333; padding: 4px 8px; border-radius: 4px; margin: 0 4px 6px 0; font-size: 13px; border-left: 2px solid #2ecc71; }
+        /* 우측: 경매 인터페이스 */
+        .right-panel { flex: 4; display: flex; flex-direction: column; gap: 20px; }
+        .auction-board { background: #1e1e1e; padding: 20px; border-radius: 8px; flex: 1; border: 2px solid #ff9800; }
+        .unassigned-list { background: #1e1e1e; padding: 15px; border-radius: 8px; flex: 1; overflow-y: auto; border: 1px solid #333; }
+        .target-card { background: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 20px; text-align: center; }
+        .target-card h2 { margin: 0 0 10px 0; color: #ff9800; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+        .form-group input, .form-group select { padding: 10px; background: #333; border: 1px solid #555; color: white; border-radius: 4px; }
+        .btn-bid { width: 100%; padding: 12px; background: #ff9800; border: none; color: white; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 4px; }
+        .btn-bid:hover { background: #e68a00; }
+        .participant-item { display: flex; justify-content: space-between; padding: 8px; background: #2a2a2a; margin-bottom: 5px; border-radius: 4px; cursor: pointer; }
+        .participant-item:hover { background: #3a3a3a; }
     </style>
 </head>
 <body>
 
-    <div id="add-modal" class="modal-overlay">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModals()">X</span>
-            <h2 style="margin-top:0; color:#f39c12; text-align:center;">신규 참가자 등록</h2>
-            <label>닉네임 (또는 실명)</label>
-            <input type="text" id="add-name" placeholder="예: 춘천불주먹">
-            
-            <label>배그 티어</label>
-            <select id="add-tier">
-                <option value="브론즈">브론즈</option>
-                <option value="실버">실버</option>
-                <option value="골드">골드</option>
-                <option value="플래티넘">플래티넘</option>
-                <option value="다이아">다이아</option>
-                <option value="마스터">마스터</option>
-                <option value="그랜드마스터">그랜드마스터</option>
-            </select>
-            
-            <label>평균 딜량 (숫자만)</label>
-            <input type="number" id="add-damage" placeholder="예: 250">
-            
-            <label>한 줄 소갯말</label>
-            <input type="text" id="add-intro" placeholder="예: 오더 잘 듣습니다.">
-            
-            <button class="btn-primary" onclick="addUser()">등록하기</button>
-            <button class="btn-cancel" onclick="closeModals()">취소</button>
-        </div>
-    </div>
-
-    <div id="edit-modal" class="modal-overlay">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModals()">X</span>
-            <h2 style="margin-top:0; color:#f39c12; text-align:center;">참가자 정보 수정</h2>
-            <p id="edit-fakename" style="text-align:center; color:#aaa; font-size:12px; margin-top:-10px;"></p>
-            
-            <label>닉네임 (또는 실명)</label>
-            <input type="text" id="edit-name">
-            
-            <label>배그 티어</label>
-            <select id="edit-tier">
-                <option value="브론즈">브론즈</option>
-                <option value="실버">실버</option>
-                <option value="골드">골드</option>
-                <option value="플래티넘">플래티넘</option>
-                <option value="다이아">다이아</option>
-                <option value="마스터">마스터</option>
-                <option value="그랜드마스터">그랜드마스터</option>
-            </select>
-            
-            <label>평균 딜량 (숫자만)</label>
-            <input type="number" id="edit-damage">
-            
-            <label>한 줄 소갯말</label>
-            <input type="text" id="edit-intro">
-
-            <label>소속 팀 배정 (완성 시 입력)</label>
-            <input type="text" id="edit-team" placeholder="예: 1팀 (미배정 시 비워둠)">
-            
-            <button class="btn-primary" onclick="updateUser()">정보 수정</button>
-            <button class="btn-danger" onclick="deleteUser()">참가자 삭제</button>
-        </div>
-    </div>
-
     <div class="header">
-        <h1>GunGangManHae</h1>
+        <h1>배틀그라운드 4인 1팀 경매 시스템</h1>
+        <div class="admin-panel">
+            <input type="password" id="adminCode" placeholder="진행자 코드">
+            <button onclick="toggleAdmin()">진행자 접속</button>
+        </div>
     </div>
 
-    <div class="box">
-        <h3 style="margin: 0; margin-bottom: 5px;">참가자 엔트리 현황 (최대 64명)</h3>
-        <p style="font-size: 13px; color: #aaa; margin: 0 0 15px 0;">빈 자리를 클릭하면 참가자를 추가할 수 있고, 등록된 참가자를 클릭하면 수정/삭제 및 팀 배정이 가능합니다.</p>
-        <div id="participant-grid" class="grid-container">
+    <div class="container" id="app-container">
+        <div class="left-panel">
+            <h3>팀 확정 엔트리 현황</h3>
+            <div class="table-grid" id="entryGrid">
+                <div class="tier-header">1티어 (팀장)</div>
+                <div class="tier-header">2티어</div>
+                <div class="tier-header">3티어</div>
+                <div class="tier-header">4티어</div>
+                </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="auction-board">
+                <h3>경매 진행 창</h3>
+                <div class="target-card" id="auctionTarget">
+                    <h2>대기 중</h2>
+                    <p>아래 목록에서 경매 대상자를 선택하세요.</p>
+                </div>
+                
+                <div class="form-group">
+                    <label>낙찰 팀 선택 (팀장 이름 또는 팀명)</label>
+                    <select id="teamSelect">
+                        <option value="">팀을 선택하세요</option>
+                        </select>
+                </div>
+                <div class="form-group">
+                    <label>낙찰 금액 (포인트)</label>
+                    <input type="number" id="bidAmount" placeholder="예: 300">
+                </div>
+                <button class="btn-bid" onclick="submitBid()">낙찰 및 팀 확정</button>
             </div>
-    </div>
 
-    <div class="box">
-        <h3 style="margin-top:0; color:#2ecc71;">완성된 팀 현황판 (총 16팀)</h3>
-        <p style="font-size: 13px; color: #aaa; margin-top: -10px;">참가자 수정 창에서 같은 '팀 이름'을 4명에게 부여하면 이곳에 자동으로 채워집니다.</p>
-        <div id="team-grid" class="team-grid-container">
+            <div class="unassigned-list">
+                <h3>미배정 참가자 목록 (경매 대기)</h3>
+                <div id="unassignedList"></div>
             </div>
+        </div>
     </div>
 
-<script>
-    const SUPABASE_URL = "https://qjdtojpcprbngcxoyogd.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZHRvanBjcHJibmdjeG95b2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MTA4NzMsImV4cCI6MjA5OTA4Njg3M30.Hcwewr7vDaza0XEtLrgg_vMA6ym9wSSBVcCnoqSiSNQ";
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    <script>
+        // Supabase 초기화 (본인의 프로젝트 설정값으로 변경)
+        const SUPABASE_URL = "https://qjdtojpcprbngcxoyogd.supabase.co";
 
-    const MAX_PARTICIPANTS = 64;
-    const MAX_TEAMS = 16;
-    let participantsData = [];
-    let currentEditToken = "";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZHRvanBjcHJibmdjeG95b2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MTA4NzMsImV4cCI6MjA5OTA4Njg3M30.Hcwewr7vDaza0XEtLrgg_vMA6ym9wSSBVcCnoqSiSNQ"; 
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    window.onload = async function() {
-        initTeamGrid();
-        loadParticipantsData();
-        subscribeRealtime();
-    };
+        let isAdmin = false;
+        let participants = [];
+        let currentAuctionTarget = null;
 
-    // 16개의 빈 팀 박스를 미리 생성하는 함수
-    function initTeamGrid() {
-        const grid = document.getElementById('team-grid');
-        grid.innerHTML = "";
-        for (let i = 0; i < MAX_TEAMS; i++) {
-            const cell = document.createElement('div');
-            cell.className = "team-cell empty";
-            cell.innerText = "팀 결성 대기 중";
-            cell.id = `team-cell-${i}`;
-            grid.appendChild(cell);
+        // 진행자 접속 처리
+        function toggleAdmin() {
+            const code = document.getElementById('adminCode').value;
+            if(code === '0000') { // 진행자 비밀번호
+                isAdmin = true;
+                document.getElementById('app-container').classList.add('admin-mode');
+                alert('진행자 모드로 전환되었습니다. 실명 확인 및 삭제가 가능합니다.');
+                renderAll();
+            } else {
+                alert('코드가 일치하지 않습니다.');
+            }
         }
-    }
 
-    function closeModals() {
-        document.getElementById('add-modal').style.display = "none";
-        document.getElementById('edit-modal').style.display = "none";
-        currentEditToken = "";
-    }
-
-    function openAddModal() {
-        if (participantsData.length >= MAX_PARTICIPANTS) {
-            alert("64명 엔트리가 모두 찼습니다.");
-            return;
+        // 참가자 데이터 불러오기
+        async function fetchParticipants() {
+            const { data, error } = await supabase.from('participants').select('*').order('created_at', { ascending: true });
+            if (error) {
+                console.error(error);
+                return;
+            }
+            participants = data;
+            renderAll();
         }
-        document.getElementById('add-name').value = "";
-        document.getElementById('add-damage').value = "";
-        document.getElementById('add-intro').value = "";
-        document.getElementById('add-modal').style.display = "flex";
-    }
 
-    function openEditModal(token) {
-        const user = participantsData.find(p => p.p_token === token);
-        if (!user) return;
+        // 전체 화면 렌더링 통합
+        function renderAll() {
+            renderEntryGrid();
+            renderUnassignedList();
+            renderTeamSelectOptions();
+        }
 
-        currentEditToken = token;
-        document.getElementById('edit-fakename').innerText = `고유 가명: ${user.fake_name}`;
-        document.getElementById('edit-name').value = user.real_name;
-        document.getElementById('edit-tier').value = user.tier;
-        document.getElementById('edit-damage').value = user.avg_damage;
-        document.getElementById('edit-intro').value = user.intro;
-        document.getElementById('edit-team').value = user.team_name || "";
+        // 좌측 엔트리 그리드 렌더링
+        function renderEntryGrid() {
+            const grid = document.getElementById('entryGrid');
+            // 기존 데이터 지우기 (헤더 4개 제외)
+            while(grid.children.length > 4) {
+                grid.removeChild(grid.lastChild);
+            }
 
-        document.getElementById('edit-modal').style.display = "flex";
-    }
-
-    async function loadParticipantsData() {
-        const { data } = await supabaseClient.from('participants').select('*').order('created_at', { ascending: true });
-        if (!data) return;
-        
-        participantsData = data;
-        renderGrid();
-        renderCompletedTeams();
-    }
-
-    function renderGrid() {
-        const grid = document.getElementById('participant-grid');
-        grid.innerHTML = "";
-
-        for (let i = 0; i < MAX_PARTICIPANTS; i++) {
-            const cell = document.createElement('div');
+            // 배정된 인원들을 티어별로 분류
+            const assigned = participants.filter(p => p.team_name);
+            const maxTeams = 16; 
             
-            if (i < participantsData.length) {
-                const p = participantsData[i];
-                cell.className = "grid-cell active";
-                cell.onclick = () => openEditModal(p.p_token);
-                
-                let cellHTML = `
-                    <div class="cell-name">${p.fake_name}</div>
-                    <div class="cell-stats">${p.tier} | 딜량: ${p.avg_damage}</div>
-                    <div class="cell-intro">"${p.intro}"</div>
-                `;
-                
-                if (p.team_name) {
-                    cell.classList.add('teamed');
-                    cellHTML += `<div class="team-label">[${p.team_name}]</div>`;
+            for(let i = 0; i < maxTeams; i++) {
+                for(let tier = 1; tier <= 4; tier++) {
+                    const cellDiv = document.createElement('div');
+                    // 임시 로직: 실제 팀 배정 로직에 맞게 필터링 필요 (여기서는 화면 표시용)
+                    // 현재는 단순히 해당 티어의 배정된 인원을 순서대로 채워넣는 예시입니다.
+                    const tierParticipants = assigned.filter(p => String(p.tier) === String(tier));
+                    const p = tierParticipants[i];
+
+                    if (p) {
+                        cellDiv.className = 'cell';
+                        const displayName = isAdmin ? `${p.fake_name} <br><small style="color:#aaa">(${p.real_name})</small>` : p.fake_name;
+                        cellDiv.innerHTML = `
+                            <div>
+                                <strong>${displayName}</strong><br>
+                                <span style="color:#888; font-size:12px;">딜량: ${p.avg_damage}</span>
+                            </div>
+                            <button class="delete-btn" onclick="deleteParticipant('${p.p_token}')">X</button>
+                        `;
+                    } else {
+                        // 빈 자리는 텍스트 없이 스타일만 유지
+                        cellDiv.className = 'cell-empty';
+                    }
+                    grid.appendChild(cellDiv);
                 }
-                cell.innerHTML = cellHTML;
-            } else {
-                cell.className = "grid-cell";
-                cell.innerText = "빈 자리 (클릭하여 추가)";
-                cell.onclick = openAddModal;
             }
-            grid.appendChild(cell);
-        }
-    }
-
-    async function addUser() {
-        const rName = document.getElementById('add-name').value.trim();
-        const rTier = document.getElementById('add-tier').value;
-        const rDmg = parseInt(document.getElementById('add-damage').value);
-        const rIntro = document.getElementById('add-intro').value.trim();
-
-        if (!rName || !rDmg || !rIntro) {
-            alert("모든 항목을 입력해주세요.");
-            return;
         }
 
-        const token = "p_" + Math.random().toString(36).substr(2, 9);
-        const words = ["길리슈트", "보급상자", "삼뚝", "진통제", "프라이팬", "레드존", "구급상자", "수류탄", "다시아", "오토바이"];
-        const fakeName = "익명_" + words[Math.floor(Math.random() * words.length)] + "_" + Math.random().toString(36).substr(2, 4).toUpperCase();
+        // 우측 하단 미배정 목록 렌더링
+        function renderUnassignedList() {
+            const listDiv = document.getElementById('unassignedList');
+            listDiv.innerHTML = '';
+            const unassigned = participants.filter(p => !p.team_name);
 
-        const newUser = { p_token: token, real_name: rName, fake_name: fakeName, avg_damage: rDmg, tier: rTier, intro: rIntro, team_name: null };
-
-        await supabaseClient.from('participants').insert([newUser]);
-        closeModals();
-    }
-
-    async function updateUser() {
-        if (!currentEditToken) return;
-
-        const rName = document.getElementById('edit-name').value.trim();
-        const rTier = document.getElementById('edit-tier').value;
-        const rDmg = parseInt(document.getElementById('edit-damage').value);
-        const rIntro = document.getElementById('edit-intro').value.trim();
-        let rTeam = document.getElementById('edit-team').value.trim();
-        
-        if (rTeam === "") rTeam = null;
-
-        if (!rName || !rDmg || !rIntro) {
-            alert("모든 항목을 올바르게 입력해주세요.");
-            return;
+            unassigned.forEach(p => {
+                const item = document.createElement('div');
+                item.className = 'participant-item';
+                const displayName = isAdmin ? `${p.fake_name} (${p.real_name})` : p.fake_name;
+                item.innerHTML = `
+                    <span>[${p.tier}티어] ${displayName}</span>
+                    <span>딜량: ${p.avg_damage}</span>
+                `;
+                item.onclick = () => setAuctionTarget(p);
+                listDiv.appendChild(item);
+            });
         }
 
-        await supabaseClient.from('participants')
-            .update({ real_name: rName, tier: rTier, avg_damage: rDmg, intro: rIntro, team_name: rTeam })
-            .eq('p_token', currentEditToken);
+        // 팀 선택 셀렉트 박스 렌더링 (1티어 팀장 기준)
+        function renderTeamSelectOptions() {
+            const select = document.getElementById('teamSelect');
+            select.innerHTML = '<option value="">팀을 선택하세요</option>';
+            // 1티어로 등록된 인원들을 팀장으로 간주
+            const teamLeaders = participants.filter(p => String(p.tier) === '1');
             
-        closeModals();
-    }
-
-    async function deleteUser() {
-        if (!currentEditToken) return;
-        
-        if (confirm("정말로 이 참가자를 명단에서 삭제하시겠습니까?")) {
-            await supabaseClient.from('participants').delete().eq('p_token', currentEditToken);
-            closeModals();
+            teamLeaders.forEach((leader, idx) => {
+                const opt = document.createElement('option');
+                const teamName = leader.team_name || `팀 ${leader.fake_name}`;
+                opt.value = teamName;
+                opt.textContent = teamName;
+                select.appendChild(opt);
+            });
         }
-    }
 
-    // 4명이 모인 팀을 추려 16개 그리드에 채워 넣는 함수
-    function renderCompletedTeams() {
-        const teams = {};
-        
-        // 팀 이름별로 인원 수집
-        participantsData.forEach(p => {
-            if (p.team_name) {
-                if (!teams[p.team_name]) teams[p.team_name] = [];
-                teams[p.team_name].push(p);
-            }
-        });
-
-        // 4명 이상인 팀만 필터링하여 배열로 변환 후 정렬 (예: 1팀, 2팀 순서대로 정렬)
-        const completedTeams = Object.entries(teams)
-            .filter(([teamName, members]) => members.length >= 4)
-            .sort((a, b) => a[0].localeCompare(b[0]));
-
-        // 16개 셀 업데이트
-        for (let i = 0; i < MAX_TEAMS; i++) {
-            const cell = document.getElementById(`team-cell-${i}`);
+        // 경매 대상자 선택
+        function setAuctionTarget(participant) {
+            currentAuctionTarget = participant;
+            const targetDiv = document.getElementById('auctionTarget');
+            const displayName = isAdmin ? `${participant.fake_name} (실명: ${participant.real_name})` : participant.fake_name;
             
-            if (i < completedTeams.length) {
-                // 팀이 결성된 자리
-                const [teamName, members] = completedTeams[i];
-                cell.className = "team-cell active";
-                
-                let html = `<h4 class="team-title">${teamName}</h4><div>`;
-                members.forEach(m => {
-                    html += `<span class="team-member">${m.fake_name} (실명: ${m.real_name})</span>`;
-                });
-                html += `</div>`;
-                cell.innerHTML = html;
+            targetDiv.innerHTML = `
+                <h2>${displayName}</h2>
+                <p><strong>티어:</strong> ${participant.tier} | <strong>평균 딜량:</strong> ${participant.avg_damage}</p>
+                <p style="background: #333; padding: 10px; border-radius: 4px; font-style: italic;">"${participant.intro}"</p>
+            `;
+        }
+
+        // 낙찰 및 팀 배정 처리 (DB 업데이트 및 Insert)
+        async function submitBid() {
+            if (!currentAuctionTarget) return alert('경매 대상자를 먼저 선택해주세요.');
+            const teamName = document.getElementById('teamSelect').value;
+            const bidAmount = document.getElementById('bidAmount').value;
+
+            if (!teamName || !bidAmount) return alert('낙찰 팀과 금액을 모두 입력해주세요.');
+
+            // 1. participants 테이블 팀명 업데이트
+            const { error: updateError } = await supabase
+                .from('participants')
+                .update({ team_name: teamName })
+                .eq('p_token', currentAuctionTarget.p_token);
+
+            if (updateError) return alert('팀 배정 실패: ' + updateError.message);
+
+            // 2. auction_bids 테이블 기록 (히스토리용)
+            const { error: insertError } = await supabase
+                .from('auction_bids')
+                .insert([{
+                    p_token: currentAuctionTarget.p_token,
+                    real_name: currentAuctionTarget.real_name,
+                    fake_name: currentAuctionTarget.fake_name,
+                    bid_amount: parseInt(bidAmount)
+                }]);
+
+            if (insertError) console.error('입찰 기록 저장 실패:', insertError);
+
+            alert(`${currentAuctionTarget.fake_name}님이 ${teamName} 팀에 낙찰되었습니다!`);
+            currentAuctionTarget = null;
+            document.getElementById('auctionTarget').innerHTML = '<h2>대기 중</h2><p>아래 목록에서 경매 대상자를 선택하세요.</p>';
+            document.getElementById('bidAmount').value = '';
+            
+            fetchParticipants(); // 화면 갱신
+        }
+
+        // 참가자 삭제 기능 (진행자 전용)
+        async function deleteParticipant(token) {
+            if(!isAdmin) return;
+            if(!confirm('해당 참가자를 완전히 삭제하시겠습니까?')) return;
+
+            const { error } = await supabase.from('participants').delete().eq('p_token', token);
+            if(error) {
+                alert('삭제 중 오류 발생: ' + error.message);
             } else {
-                // 아직 결성되지 않은 빈자리
-                cell.className = "team-cell empty";
-                cell.innerHTML = "팀 결성 대기 중";
+                fetchParticipants();
             }
         }
-    }
 
-    function subscribeRealtime() {
-        supabaseClient.channel('teams-channel')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, 
-            payload => {
-                loadParticipantsData();
-            }).subscribe();
-    }
-</script>
+        // 초기 데이터 로드
+        fetchParticipants();
+    </script>
 </body>
 </html>
