@@ -3,197 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GunGangManHae - PUBG Team Auction</title>
+    <title>GunGangManHae - 배틀그라운드 경매</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Malgun Gothic', sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; line-height: 1.6; background-color: #f5f5f7; color: #333; }
-        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .box { border: 1px solid #e1e4e6; padding: 20px; margin-bottom: 20px; border-radius: 6px; background-color: #fafbfc; }
-        .hidden { display: none; }
-        button { padding: 10px 20px; cursor: pointer; background-color: #0070f3; color: #fff; border: none; border-radius: 4px; font-weight: bold; }
-        button:hover { background-color: #0051a8; }
-        input[type="text"], input[type="number"] { padding: 10px; width: 250px; border: 1px solid #ccc; border-radius: 4px; margin-right: 10px; font-size: 14px; }
-        ul { list-style: none; padding: 0; max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; }
-        li { padding: 12px; border-bottom: 1px solid #e1e4e6; display: flex; justify-content: space-between; background: #fff; }
-        li:nth-child(even) { background: #f9f9f9; }
-        .status-bar { font-size: 14px; color: #666; margin-bottom: 10px; font-weight: bold; }
+        body { font-family: 'Malgun Gothic', sans-serif; max-width: 700px; margin: 30px auto; padding: 20px; background-color: #1e1e24; color: #fff; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #f39c12; padding-bottom: 10px; }
+        .header h1 { margin: 0; color: #f39c12; }
+        .box { background: #2b2b36; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; margin-bottom: 15px; background-color: #3498db; }
+        .input-group { display: flex; gap: 10px; }
+        input[type="number"] { flex: 1; padding: 12px; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; background: #fff; }
+        button { padding: 12px 20px; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; background-color: #f39c12; color: #1e1e24; cursor: pointer; transition: 0.2s; }
+        button:hover { background-color: #d68910; }
+        ul { list-style: none; padding: 0; margin: 0; max-height: 350px; overflow-y: auto; }
+        li { background: #3a3a48; margin-bottom: 8px; padding: 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #f39c12; }
+        .amount { font-size: 18px; font-weight: bold; color: #f39c12; }
+        .team-container { margin-top: 15px; padding: 15px; background: #222; border-radius: 6px; border: 1px solid #444; }
+        .team-title { margin-top: 0; color: #2ecc71; font-size: 18px; }
+        .team-member { display: inline-block; background: #333; padding: 5px 10px; border-radius: 4px; margin: 5px 5px 0 0; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>GunGangManHae 팀 매칭 경매 시스템</h1>
-    
-    <div id="step-join" class="box">
-        <h3>대회 참여 정보 입력</h3>
-        <p style="font-size:13px; color:#666;">진행자로 입장하려면 사전에 약속된 인증 비밀번호를 입력해야 합니다.</p>
-        <div style="margin-bottom: 15px;">
-            <label><input type="radio" name="role" value="participant" checked onclick="toggleHostPassword(false)"> 참가자 선수로 입장</label>
-            <label style="margin-left: 20px;"><input type="radio" name="role" value="host" onclick="toggleHostPassword(true)"> 대회 진행자로 입장</label>
-        </div>
-        
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="input-nickname" placeholder="본인의 실명 또는 닉네임 입력">
-            <input type="text" id="input-host-pw" class="hidden" placeholder="진행자 인증 비밀번호 입력">
-        </div>
-        <button onclick="initializeSession()">경매장 입장하기</button>
+    <div class="header">
+        <h1>GunGangManHae 경매장</h1>
     </div>
 
-    <div id="step-main" class="box hidden">
-        <div class="status-bar">
-            접속 권한: <span id="display-role">확인 중</span> | 내 식별 코드: <span id="display-token"></span>
-        </div>
+    <div class="box">
+        <div id="role-badge" class="status-badge">접속 확인 중...</div>
         
-        <div id="bid-form-container" class="box hidden">
-            <h3>실시간 입찰하기</h3>
-            <input type="number" id="input-amount" placeholder="입찰 금액을 입력하세요 (포인트)">
-            <button onclick="submitBid()">입찰 신청</button>
+        <div id="bid-section" style="display: none;">
+            <p style="margin-top:0; font-size:14px; color:#aaa;">입찰할 포인트를 입력하고 엔터 또는 버튼을 누르세요.</p>
+            <div class="input-group">
+                <input type="number" id="input-amount" placeholder="예: 150" onkeypress="if(event.key === 'Enter') submitBid()">
+                <button onclick="submitBid()">입찰하기</button>
+            </div>
         </div>
-
-        <div id="host-tools" class="box hidden">
-            <h3>진행자 관리 기능</h3>
-            <p style="font-size:13px; color:#666;">스프레드시트 대시보드 대용으로 실명 매칭 정보를 포함한 전체 로그를 실시간 모니터링합니다.</p>
-        </div>
-
-        <h3>현재 입찰 내역 및 동기화 현황 (실시간)</h3>
-        <ul id="bid-log-list">
-            </ul>
     </div>
-</div>
+
+    <div class="box">
+        <h3 style="margin-top:0;">실시간 입찰 로그 (전체 익명)</h3>
+        <ul id="bid-list">
+        </ul>
+    </div>
+
+    <div class="box">
+        <h3 style="margin-top:0; color:#2ecc71;">완성된 팀 결과 공개</h3>
+        <p style="font-size:13px; color:#aaa; margin-top:-10px;">4인이 배정된 팀만 실명이 공개됩니다.</p>
+        <div id="team-list-container">
+            <p style="color:#777;">아직 완성된 팀이 없습니다.</p>
+        </div>
+    </div>
 
 <script>
-    // 본인의 Supabase 프로젝트 정보로 변경해야 정상 작동합니다.
-    const SUPABASE_URL = "https://qjdtojpcprbngcxoyogd.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZHRvanBjcHJibmdjeG95b2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MTA4NzMsImV4cCI6MjA5OTA4Njg3M30.Hcwewr7vDaza0XEtLrgg_vMA6ym9wSSBVcCnoqSiSNQ";
-    
-    // 진행자 인증용 마스터 비밀번호 (원하는 값으로 변경 가능)
-    const HOST_MASTER_PASSWORD = "ggmh_admin_pass"; 
-    const ROOM_ID = "gungangmanhae-season1";
-
+    // 본인의 주소와 키로 반드시 변경하십시오.
+    const SUPABASE_URL = "https://your-project-url.supabase.co";
+    const SUPABASE_ANON_KEY = "your-anon-key";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let currentRole = "participant";
-    let realName = "";
-    let fakeName = "";
-    let userToken = "";
+    let userProfile = null;
 
-    function toggleHostPassword(show) {
-        const pwInput = document.getElementById('input-host-pw');
-        if(show) pwInput.classList.remove('hidden');
-        else pwInput.classList.add('hidden');
-    }
+    window.onload = async function() {
+        await setupParticipant();
+        loadExistingBids();
+        loadCompletedTeams();
+        subscribeRealtime();
+    };
 
-    async function initializeSession() {
-        realName = document.getElementById('input-nickname').value.trim();
-        currentRole = document.querySelector('input[name="role"]:checked').value;
-
-        if (!realName) {
-            alert("닉네임 또는 실명을 입력해 주세요.");
-            return;
-        }
-
-        if (currentRole === "host") {
-            const hostPw = document.getElementById('input-host-pw').value;
-            if (hostPw !== HOST_MASTER_PASSWORD) {
-                alert("진행자 인증 비밀번호가 올바르지 않습니다.");
+    async function setupParticipant() {
+        let storedData = localStorage.getItem('ggmh_user');
+        
+        if (storedData) {
+            userProfile = JSON.parse(storedData);
+        } else {
+            let realName = prompt("배틀그라운드 대회에 참가할 실명(또는 닉네임)을 입력하세요.");
+            if (!realName || realName.trim() === "") {
+                alert("실명을 입력해야 참여할 수 있습니다.");
+                window.location.reload();
                 return;
             }
+
+            const token = "p_" + Math.random().toString(36).substr(2, 9);
+            const animals = ["길리슈트", "보급상자", "삼뚝", "진통제", "프라이팬", "레드존", "구급상자", "수류탄"];
+            const fakeName = "익명_" + animals[Math.floor(Math.random() * animals.length)] + "_" + Math.random().toString(36).substr(2, 4).toUpperCase();
+
+            userProfile = { p_token: token, real_name: realName.trim(), fake_name: fakeName, team_name: null };
+
+            await supabase.from('participants').insert([userProfile]);
+            localStorage.setItem('ggmh_user', JSON.stringify(userProfile));
         }
 
-        // 브라우저 캐시 삭제 시 복구가 가능하도록 토큰 관리
-        userToken = localStorage.getItem('ggmh_user_token');
-        if (!userToken) {
-            userToken = 'usr_' + Math.random().toString(36).substr(2, 11);
-            localStorage.setItem('ggmh_user_token', userToken);
-        }
-
-        // 참가자 익명 가명 자동 생성
-        const animals = ["길리슈트", "보급상자", "삼뚝", "진통제", "에너지드링크", "프라이팬"];
-        const randomIndex = Math.floor(Math.random() * animals.length);
-        const randomHash = Math.random().toString(36).substr(2, 4).toUpperCase();
-        fakeName = "익명_" + animals[randomIndex] + "_" + randomHash;
-
-        // UI 전환
-        document.getElementById('step-join').classList.add('hidden');
-        document.getElementById('step-main').classList.remove('hidden');
-
-        const roleDisplay = document.getElementById('display-role');
-        const tokenDisplay = document.getElementById('display-token');
-        tokenDisplay.innerText = userToken;
-
-        if (currentRole === "host") {
-            roleDisplay.innerText = "대회 진행자 (실명 열람 가능)";
-            document.getElementById('host-tools').classList.remove('hidden');
-        } else {
-            roleDisplay.innerText = "참가자 선수 (" + fakeName + ")";
-            document.getElementById('bid-form-container').classList.remove('hidden');
-        }
-
-        // 초기 입찰 기록 로드 및 실시간 네트워크 채널 구독
-        await loadExistingBids();
-        connectRealtimeChannel();
-    }
-
-    async function loadExistingBids() {
-        const { data, error } = await supabase
-            .from('auction_bids')
-            .select('*')
-            .eq('room_id', ROOM_ID)
-            .order('created_at', { ascending: false });
-
-        if (data) {
-            data.forEach(bid => renderBidRow(bid));
-        }
-    }
-
-    function connectRealtimeChannel() {
-        supabase
-            .channel('public-bids-channel')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'auction_bids', filter: 'room_id=eq.' + ROOM_ID }, 
-            payload => {
-                renderBidRow(payload.new);
-            })
-            .subscribe();
-    }
-
-    function renderBidRow(bid) {
-        const listContainer = document.getElementById('bid-log-list');
-        const li = document.createElement('li');
-        
-        // 권한에 따른 데이터 마스킹 분기 처리
-        // 진행자는 실명을 괄호 안에 함께 확인 가능하며, 일반 참가자는 익명성 유지
-        const nameText = (currentRole === "host") 
-            ? bid.fake_name + " (" + bid.real_name + ")" 
-            : bid.fake_name;
-
-        li.innerHTML = "<span>" + nameText + "</span> <strong>" + bid.bid_amount.toLocaleString() + " 포인트 입찰</strong>";
-        listContainer.insertBefore(li, listContainer.firstChild);
+        document.getElementById('role-badge').innerText = `접속자: ${userProfile.fake_name}`;
+        document.getElementById('bid-section').style.display = "block";
     }
 
     async function submitBid() {
-        const amountInput = document.getElementById('input-amount');
-        const amount = parseInt(amountInput.value);
+        const inputObj = document.getElementById('input-amount');
+        const amount = parseInt(inputObj.value);
 
-        if (!amount || amount <= 0) {
-            alert("정확한 입찰 금액을 입력해 주세요.");
+        if (!amount || amount <= 0) return;
+
+        inputObj.disabled = true;
+
+        await supabase.from('auction_bids').insert([{
+            p_token: userProfile.p_token,
+            real_name: userProfile.real_name,
+            fake_name: userProfile.fake_name,
+            bid_amount: amount
+        }]);
+
+        inputObj.disabled = false;
+        inputObj.value = "";
+        inputObj.focus();
+    }
+
+    async function loadExistingBids() {
+        const { data } = await supabase.from('auction_bids').select('*').order('created_at', { ascending: false });
+        if (data) {
+            const list = document.getElementById('bid-list');
+            list.innerHTML = "";
+            data.forEach(bid => appendBid(bid, list));
+        }
+    }
+
+    // 4인 완성 팀 불러오기 및 렌더링
+    async function loadCompletedTeams() {
+        const { data } = await supabase.from('participants').select('*').not('team_name', 'is', null);
+        const container = document.getElementById('team-list-container');
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p style="color:#777;">아직 완성된 팀이 없습니다.</p>';
             return;
         }
 
-        const { error } = await supabase
-            .from('auction_bids')
-            .insert([{
-                room_id: ROOM_ID,
-                p_token: userToken,
-                real_name: realName,
-                fake_name: fakeName,
-                bid_amount: amount
-            }]);
+        // 팀 이름 기준으로 데이터 그룹화
+        const teams = {};
+        data.forEach(p => {
+            if (!teams[p.team_name]) teams[p.team_name] = [];
+            teams[p.team_name].push(p);
+        });
 
-        if (error) {
-            alert("입찰 오류 발생: " + error.message);
-        } else {
-            amountInput.value = "";
+        container.innerHTML = "";
+        let hasCompleted = false;
+
+        // 4명 이상인 팀만 필터링하여 화면에 표시
+        for (const [teamName, members] of Object.entries(teams)) {
+            if (members.length >= 4) {
+                hasCompleted = true;
+                const teamDiv = document.createElement('div');
+                teamDiv.className = "team-container";
+                
+                let html = `<h4 class="team-title">${teamName} 팀</h4><div>`;
+                members.forEach(m => {
+                    html += `<span class="team-member">${m.fake_name} (실명: ${m.real_name})</span>`;
+                });
+                html += `</div>`;
+                teamDiv.innerHTML = html;
+                container.appendChild(teamDiv);
+            }
         }
+
+        if (!hasCompleted) {
+            container.innerHTML = '<p style="color:#777;">아직 4인이 모두 모인 팀이 없습니다.</p>';
+        }
+    }
+
+    function subscribeRealtime() {
+        // 입찰 기록 실시간 업데이트
+        supabase.channel('bids-channel')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'auction_bids' }, 
+            payload => {
+                const list = document.getElementById('bid-list');
+                appendBid(payload.new, list);
+            }).subscribe();
+
+        // 팀 배정 상태 실시간 업데이트 (참가자 테이블 변경 감지)
+        supabase.channel('teams-channel')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'participants' }, 
+            payload => {
+                loadCompletedTeams();
+            }).subscribe();
+    }
+
+    function appendBid(bid, listElement) {
+        const li = document.createElement('li');
+        // 모두가 익명 가명만 보도록 고정
+        li.innerHTML = `<span>${bid.fake_name}</span> <span class="amount">${bid.bid_amount.toLocaleString()} P</span>`;
+        listElement.insertBefore(li, listElement.firstChild);
     }
 </script>
 </body>
