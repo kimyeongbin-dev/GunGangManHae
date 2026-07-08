@@ -54,7 +54,7 @@
                 <div class="tier-header">2티어</div>
                 <div class="tier-header">3티어</div>
                 <div class="tier-header">4티어</div>
-                </div>
+            </div>
         </div>
 
         <div class="right-panel">
@@ -69,7 +69,7 @@
                     <label>낙찰 팀 선택 (팀장 이름 또는 팀명)</label>
                     <select id="teamSelect">
                         <option value="">팀을 선택하세요</option>
-                        </select>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label>낙찰 금액 (포인트)</label>
@@ -86,11 +86,10 @@
     </div>
 
     <script>
-        // Supabase 초기화 (본인의 프로젝트 설정값으로 변경)
+        // Supabase 초기화 설정
         const SUPABASE_URL = "https://qjdtojpcprbngcxoyogd.supabase.co";
-
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZHRvanBjcHJibmdjeG95b2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MTA4NzMsImV4cCI6MjA5OTA4Njg3M30.Hcwewr7vDaza0XEtLrgg_vMA6ym9wSSBVcCnoqSiSNQ"; 
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZHRvanBjcHJibmdjeG95b2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MTA4NzMsImV4cCI6MjA5OTA4Njg3M30.Hcwewr7vDaza0XEtLrgg_vMA6ym9wSSBVcCnoqSiSNQ";
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         let isAdmin = false;
         let participants = [];
@@ -99,7 +98,7 @@
         // 진행자 접속 처리
         function toggleAdmin() {
             const code = document.getElementById('adminCode').value;
-            if(code === '0000') { // 진행자 비밀번호
+            if(code === '0000') {
                 isAdmin = true;
                 document.getElementById('app-container').classList.add('admin-mode');
                 alert('진행자 모드로 전환되었습니다. 실명 확인 및 삭제가 가능합니다.');
@@ -111,7 +110,11 @@
 
         // 참가자 데이터 불러오기
         async function fetchParticipants() {
-            const { data, error } = await supabase.from('participants').select('*').order('created_at', { ascending: true });
+            const { data, error } = await supabaseClient
+                .from('participants')
+                .select('*')
+                .order('created_at', { ascending: true });
+                
             if (error) {
                 console.error(error);
                 return;
@@ -130,20 +133,16 @@
         // 좌측 엔트리 그리드 렌더링
         function renderEntryGrid() {
             const grid = document.getElementById('entryGrid');
-            // 기존 데이터 지우기 (헤더 4개 제외)
             while(grid.children.length > 4) {
                 grid.removeChild(grid.lastChild);
             }
 
-            // 배정된 인원들을 티어별로 분류
             const assigned = participants.filter(p => p.team_name);
             const maxTeams = 16; 
             
             for(let i = 0; i < maxTeams; i++) {
                 for(let tier = 1; tier <= 4; tier++) {
                     const cellDiv = document.createElement('div');
-                    // 임시 로직: 실제 팀 배정 로직에 맞게 필터링 필요 (여기서는 화면 표시용)
-                    // 현재는 단순히 해당 티어의 배정된 인원을 순서대로 채워넣는 예시입니다.
                     const tierParticipants = assigned.filter(p => String(p.tier) === String(tier));
                     const p = tierParticipants[i];
 
@@ -158,7 +157,6 @@
                             <button class="delete-btn" onclick="deleteParticipant('${p.p_token}')">X</button>
                         `;
                     } else {
-                        // 빈 자리는 텍스트 없이 스타일만 유지
                         cellDiv.className = 'cell-empty';
                     }
                     grid.appendChild(cellDiv);
@@ -185,11 +183,10 @@
             });
         }
 
-        // 팀 선택 셀렉트 박스 렌더링 (1티어 팀장 기준)
+        // 팀 선택 셀렉트 박스 렌더링
         function renderTeamSelectOptions() {
             const select = document.getElementById('teamSelect');
             select.innerHTML = '<option value="">팀을 선택하세요</option>';
-            // 1티어로 등록된 인원들을 팀장으로 간주
             const teamLeaders = participants.filter(p => String(p.tier) === '1');
             
             teamLeaders.forEach((leader, idx) => {
@@ -214,7 +211,7 @@
             `;
         }
 
-        // 낙찰 및 팀 배정 처리 (DB 업데이트 및 Insert)
+        // 낙찰 및 팀 배정 처리
         async function submitBid() {
             if (!currentAuctionTarget) return alert('경매 대상자를 먼저 선택해주세요.');
             const teamName = document.getElementById('teamSelect').value;
@@ -222,16 +219,16 @@
 
             if (!teamName || !bidAmount) return alert('낙찰 팀과 금액을 모두 입력해주세요.');
 
-            // 1. participants 테이블 팀명 업데이트
-            const { error: updateError } = await supabase
+            // participants 테이블 업데이트
+            const { error: updateError } = await supabaseClient
                 .from('participants')
                 .update({ team_name: teamName })
                 .eq('p_token', currentAuctionTarget.p_token);
 
             if (updateError) return alert('팀 배정 실패: ' + updateError.message);
 
-            // 2. auction_bids 테이블 기록 (히스토리용)
-            const { error: insertError } = await supabase
+            // auction_bids 테이블 기록
+            const { error: insertError } = await supabaseClient
                 .from('auction_bids')
                 .insert([{
                     p_token: currentAuctionTarget.p_token,
@@ -247,15 +244,19 @@
             document.getElementById('auctionTarget').innerHTML = '<h2>대기 중</h2><p>아래 목록에서 경매 대상자를 선택하세요.</p>';
             document.getElementById('bidAmount').value = '';
             
-            fetchParticipants(); // 화면 갱신
+            fetchParticipants();
         }
 
-        // 참가자 삭제 기능 (진행자 전용)
+        // 참가자 삭제 기능
         async function deleteParticipant(token) {
             if(!isAdmin) return;
             if(!confirm('해당 참가자를 완전히 삭제하시겠습니까?')) return;
 
-            const { error } = await supabase.from('participants').delete().eq('p_token', token);
+            const { error } = await supabaseClient
+                .from('participants')
+                .delete()
+                .eq('p_token', token);
+                
             if(error) {
                 alert('삭제 중 오류 발생: ' + error.message);
             } else {
