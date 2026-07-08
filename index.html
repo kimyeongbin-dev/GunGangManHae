@@ -10,50 +10,53 @@
         .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #f39c12; padding-bottom: 10px; }
         .header h1 { margin: 0; color: #f39c12; letter-spacing: 2px; }
         .box { background: #2b2b36; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .status-badge { display: inline-block; padding: 5px 10px; border-radius: 4px; font-size: 13px; font-weight: bold; margin-bottom: 15px; background-color: #3498db; }
         
-        /* 모달 (참가 신청 폼) 스타일 */
-        #join-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { background: #2b2b36; padding: 30px; border-radius: 8px; width: 400px; border: 2px solid #f39c12; }
+        /* 모달 공통 스타일 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: #2b2b36; padding: 30px; border-radius: 8px; width: 400px; border: 2px solid #f39c12; position: relative; }
         .modal-content input, .modal-content select { width: 100%; padding: 10px; margin-bottom: 15px; border: none; border-radius: 4px; box-sizing: border-box; background: #fff; font-family: inherit; }
-        .modal-content button { width: 100%; padding: 12px; background: #f39c12; color: #1e1e24; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .modal-content button { width: 100%; padding: 12px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; margin-bottom: 10px; }
+        .btn-primary { background: #f39c12; color: #1e1e24; }
+        .btn-danger { background: #e74c3c; color: #fff; }
+        .btn-cancel { background: #7f8c8d; color: #fff; }
+        .close-btn { position: absolute; top: 15px; right: 20px; color: #aaa; cursor: pointer; font-size: 20px; font-weight: bold; }
+        .close-btn:hover { color: #fff; }
 
-        /* 8x8 그리드 레이아웃 */
+        /* 8x8 참가자 그리드 레이아웃 */
         .grid-container { display: grid; grid-template-columns: repeat(8, 1fr); gap: 10px; margin-top: 15px; }
-        .grid-cell { background-color: #3a3a48; border: 1px solid #444; border-radius: 4px; aspect-ratio: 16 / 9; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px; box-sizing: border-box; overflow: hidden; }
+        .grid-cell { background-color: #3a3a48; border: 1px solid #444; border-radius: 4px; aspect-ratio: 16 / 9; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 8px; box-sizing: border-box; overflow: hidden; cursor: pointer; transition: 0.2s; }
+        .grid-cell:hover { border-color: #aaa; background-color: #4a4a5a; }
         .grid-cell.active { border-color: #f39c12; background-color: #2e2e3a; }
+        .grid-cell.active:hover { background-color: #3e3e4a; }
         .grid-cell.teamed { border-color: #2ecc71; background-color: #1e3a29; }
+        .grid-cell.teamed:hover { background-color: #2e4a39; }
         
         .cell-name { font-weight: bold; color: #f39c12; font-size: 13px; margin-bottom: 2px; }
         .cell-stats { font-size: 11px; color: #aaa; margin-bottom: 4px; }
         .cell-intro { font-size: 10px; color: #888; font-style: italic; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; }
         .team-label { color: #2ecc71; font-weight: bold; font-size: 11px; margin-top: 4px; }
-
-        /* 하단 레이아웃 */
-        .bottom-section { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-        .input-group { display: flex; gap: 10px; margin-top: 10px; }
-        input[type="number"] { flex: 1; padding: 12px; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; }
-        button.btn-bid { padding: 12px 20px; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; background-color: #f39c12; color: #1e1e24; cursor: pointer; }
         
-        ul { list-style: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto; }
-        li { background: #3a3a48; margin-bottom: 8px; padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #f39c12; font-size: 14px; }
-        .amount { font-size: 16px; font-weight: bold; color: #f39c12; }
+        /* 4x4 완성된 팀 그리드 레이아웃 */
+        .team-grid-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
+        .team-cell { background-color: #3a3a48; border: 1px solid #444; border-radius: 6px; padding: 15px; min-height: 100px; display: flex; flex-direction: column; }
+        .team-cell.empty { align-items: center; justify-content: center; color: #777; font-size: 14px; background-color: #2a2a35; }
+        .team-cell.active { border-color: #2ecc71; background-color: #1e2a22; }
         
-        .team-container { margin-top: 10px; padding: 12px; background: #222; border-radius: 6px; border: 1px solid #444; }
-        .team-title { margin-top: 0; margin-bottom: 8px; color: #2ecc71; font-size: 16px; }
-        .team-member { display: inline-block; background: #333; padding: 4px 8px; border-radius: 4px; margin: 0 4px 4px 0; font-size: 13px; }
+        .team-title { margin-top: 0; margin-bottom: 10px; color: #2ecc71; font-size: 16px; border-bottom: 1px solid #334; padding-bottom: 5px; }
+        .team-member { display: inline-block; background: #333; padding: 4px 8px; border-radius: 4px; margin: 0 4px 6px 0; font-size: 13px; border-left: 2px solid #2ecc71; }
     </style>
 </head>
 <body>
 
-    <div id="join-modal">
+    <div id="add-modal" class="modal-overlay">
         <div class="modal-content">
-            <h2 style="margin-top:0; color:#f39c12; text-align:center;">참가자 프로필 등록</h2>
+            <span class="close-btn" onclick="closeModals()">X</span>
+            <h2 style="margin-top:0; color:#f39c12; text-align:center;">신규 참가자 등록</h2>
             <label>닉네임 (또는 실명)</label>
-            <input type="text" id="reg-name" placeholder="예: 춘천불주먹" required>
+            <input type="text" id="add-name" placeholder="예: 춘천불주먹">
             
             <label>배그 티어</label>
-            <select id="reg-tier">
+            <select id="add-tier">
                 <option value="브론즈">브론즈</option>
                 <option value="실버">실버</option>
                 <option value="골드">골드</option>
@@ -64,12 +67,47 @@
             </select>
             
             <label>평균 딜량 (숫자만)</label>
-            <input type="number" id="reg-damage" placeholder="예: 250" required>
+            <input type="number" id="add-damage" placeholder="예: 250">
             
             <label>한 줄 소갯말</label>
-            <input type="text" id="reg-intro" placeholder="예: 오더 잘 듣습니다. 백업 빠릅니다." required>
+            <input type="text" id="add-intro" placeholder="예: 오더 잘 듣습니다.">
             
-            <button onclick="registerUser()">엔트리 등록하기</button>
+            <button class="btn-primary" onclick="addUser()">등록하기</button>
+            <button class="btn-cancel" onclick="closeModals()">취소</button>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModals()">X</span>
+            <h2 style="margin-top:0; color:#f39c12; text-align:center;">참가자 정보 수정</h2>
+            <p id="edit-fakename" style="text-align:center; color:#aaa; font-size:12px; margin-top:-10px;"></p>
+            
+            <label>닉네임 (또는 실명)</label>
+            <input type="text" id="edit-name">
+            
+            <label>배그 티어</label>
+            <select id="edit-tier">
+                <option value="브론즈">브론즈</option>
+                <option value="실버">실버</option>
+                <option value="골드">골드</option>
+                <option value="플래티넘">플래티넘</option>
+                <option value="다이아">다이아</option>
+                <option value="마스터">마스터</option>
+                <option value="그랜드마스터">그랜드마스터</option>
+            </select>
+            
+            <label>평균 딜량 (숫자만)</label>
+            <input type="number" id="edit-damage">
+            
+            <label>한 줄 소갯말</label>
+            <input type="text" id="edit-intro">
+
+            <label>소속 팀 배정 (완성 시 입력)</label>
+            <input type="text" id="edit-team" placeholder="예: 1팀 (미배정 시 비워둠)">
+            
+            <button class="btn-primary" onclick="updateUser()">정보 수정</button>
+            <button class="btn-danger" onclick="deleteUser()">참가자 삭제</button>
         </div>
     </div>
 
@@ -78,80 +116,126 @@
     </div>
 
     <div class="box">
-        <h3 style="margin: 0;">참가자 엔트리 현황 (최대 64명)</h3>
+        <h3 style="margin: 0; margin-bottom: 5px;">참가자 엔트리 현황 (최대 64명)</h3>
+        <p style="font-size: 13px; color: #aaa; margin: 0 0 15px 0;">빈 자리를 클릭하면 참가자를 추가할 수 있고, 등록된 참가자를 클릭하면 수정/삭제 및 팀 배정이 가능합니다.</p>
         <div id="participant-grid" class="grid-container">
             </div>
     </div>
 
-    <div class="bottom-section">
-        <div class="box" style="margin-bottom: 0;">
-            <div id="role-badge" class="status-badge">접속 확인 중...</div>
-            <div id="bid-section" style="display: none;">
-                <h3 style="margin-top:0;">포인트 입찰</h3>
-                <div class="input-group">
-                    <input type="number" id="input-amount" placeholder="금액 입력" onkeypress="if(event.key === 'Enter') submitBid()">
-                    <button class="btn-bid" onclick="submitBid()">입찰</button>
-                </div>
+    <div class="box">
+        <h3 style="margin-top:0; color:#2ecc71;">완성된 팀 현황판 (총 16팀)</h3>
+        <p style="font-size: 13px; color: #aaa; margin-top: -10px;">참가자 수정 창에서 같은 '팀 이름'을 4명에게 부여하면 이곳에 자동으로 채워집니다.</p>
+        <div id="team-grid" class="team-grid-container">
             </div>
-        </div>
-
-        <div class="box" style="margin-bottom: 0;">
-            <h3 style="margin-top:0;">실시간 로그</h3>
-            <ul id="bid-list"></ul>
-        </div>
-
-        <div class="box" style="margin-bottom: 0;">
-            <h3 style="margin-top:0; color:#2ecc71;">완성된 팀 (4인)</h3>
-            <div id="team-list-container">
-                <p style="color:#777; font-size:14px;">아직 완성된 팀이 없습니다.</p>
-            </div>
-        </div>
     </div>
 
 <script>
-    // 변수명 충돌을 피하기 위해 supabaseClient 로 변경
     const SUPABASE_URL = "https://qjdtojpcprbngcxoyogd.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZHRvanBjcHJibmdjeG95b2dkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM1MTA4NzMsImV4cCI6MjA5OTA4Njg3M30.Hcwewr7vDaza0XEtLrgg_vMA6ym9wSSBVcCnoqSiSNQ";
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let userProfile = null;
     const MAX_PARTICIPANTS = 64;
+    const MAX_TEAMS = 16;
+    let participantsData = [];
+    let currentEditToken = "";
 
     window.onload = async function() {
-        initGrid();
-        await checkUserSession();
+        initTeamGrid();
         loadParticipantsData();
-        loadExistingBids();
         subscribeRealtime();
     };
 
-    function initGrid() {
-        const grid = document.getElementById('participant-grid');
+    // 16개의 빈 팀 박스를 미리 생성하는 함수
+    function initTeamGrid() {
+        const grid = document.getElementById('team-grid');
         grid.innerHTML = "";
-        for (let i = 0; i < MAX_PARTICIPANTS; i++) {
+        for (let i = 0; i < MAX_TEAMS; i++) {
             const cell = document.createElement('div');
-            cell.className = "grid-cell";
-            cell.innerText = "빈 자리";
-            cell.id = `cell-${i}`;
+            cell.className = "team-cell empty";
+            cell.innerText = "팀 결성 대기 중";
+            cell.id = `team-cell-${i}`;
             grid.appendChild(cell);
         }
     }
 
-    async function checkUserSession() {
-        let storedData = localStorage.getItem('ggmh_user');
-        if (storedData) {
-            userProfile = JSON.parse(storedData);
-            activateUserPanel();
-        } else {
-            document.getElementById('join-modal').style.display = "flex";
+    function closeModals() {
+        document.getElementById('add-modal').style.display = "none";
+        document.getElementById('edit-modal').style.display = "none";
+        currentEditToken = "";
+    }
+
+    function openAddModal() {
+        if (participantsData.length >= MAX_PARTICIPANTS) {
+            alert("64명 엔트리가 모두 찼습니다.");
+            return;
+        }
+        document.getElementById('add-name').value = "";
+        document.getElementById('add-damage').value = "";
+        document.getElementById('add-intro').value = "";
+        document.getElementById('add-modal').style.display = "flex";
+    }
+
+    function openEditModal(token) {
+        const user = participantsData.find(p => p.p_token === token);
+        if (!user) return;
+
+        currentEditToken = token;
+        document.getElementById('edit-fakename').innerText = `고유 가명: ${user.fake_name}`;
+        document.getElementById('edit-name').value = user.real_name;
+        document.getElementById('edit-tier').value = user.tier;
+        document.getElementById('edit-damage').value = user.avg_damage;
+        document.getElementById('edit-intro').value = user.intro;
+        document.getElementById('edit-team').value = user.team_name || "";
+
+        document.getElementById('edit-modal').style.display = "flex";
+    }
+
+    async function loadParticipantsData() {
+        const { data } = await supabaseClient.from('participants').select('*').order('created_at', { ascending: true });
+        if (!data) return;
+        
+        participantsData = data;
+        renderGrid();
+        renderCompletedTeams();
+    }
+
+    function renderGrid() {
+        const grid = document.getElementById('participant-grid');
+        grid.innerHTML = "";
+
+        for (let i = 0; i < MAX_PARTICIPANTS; i++) {
+            const cell = document.createElement('div');
+            
+            if (i < participantsData.length) {
+                const p = participantsData[i];
+                cell.className = "grid-cell active";
+                cell.onclick = () => openEditModal(p.p_token);
+                
+                let cellHTML = `
+                    <div class="cell-name">${p.fake_name}</div>
+                    <div class="cell-stats">${p.tier} | 딜량: ${p.avg_damage}</div>
+                    <div class="cell-intro">"${p.intro}"</div>
+                `;
+                
+                if (p.team_name) {
+                    cell.classList.add('teamed');
+                    cellHTML += `<div class="team-label">[${p.team_name}]</div>`;
+                }
+                cell.innerHTML = cellHTML;
+            } else {
+                cell.className = "grid-cell";
+                cell.innerText = "빈 자리 (클릭하여 추가)";
+                cell.onclick = openAddModal;
+            }
+            grid.appendChild(cell);
         }
     }
 
-    async function registerUser() {
-        const rName = document.getElementById('reg-name').value.trim();
-        const rTier = document.getElementById('reg-tier').value;
-        const rDmg = parseInt(document.getElementById('reg-damage').value);
-        const rIntro = document.getElementById('reg-intro').value.trim();
+    async function addUser() {
+        const rName = document.getElementById('add-name').value.trim();
+        const rTier = document.getElementById('add-tier').value;
+        const rDmg = parseInt(document.getElementById('add-damage').value);
+        const rIntro = document.getElementById('add-intro').value.trim();
 
         if (!rName || !rDmg || !rIntro) {
             alert("모든 항목을 입력해주세요.");
@@ -159,91 +243,52 @@
         }
 
         const token = "p_" + Math.random().toString(36).substr(2, 9);
-        const words = ["길리슈트", "보급상자", "삼뚝", "진통제", "프라이팬", "레드존", "구급상자", "수류탄"];
+        const words = ["길리슈트", "보급상자", "삼뚝", "진통제", "프라이팬", "레드존", "구급상자", "수류탄", "다시아", "오토바이"];
         const fakeName = "익명_" + words[Math.floor(Math.random() * words.length)] + "_" + Math.random().toString(36).substr(2, 4).toUpperCase();
 
-        userProfile = { 
-            p_token: token, 
-            real_name: rName, 
-            fake_name: fakeName, 
-            avg_damage: rDmg, 
-            tier: rTier, 
-            intro: rIntro, 
-            team_name: null 
-        };
+        const newUser = { p_token: token, real_name: rName, fake_name: fakeName, avg_damage: rDmg, tier: rTier, intro: rIntro, team_name: null };
 
-        await supabaseClient.from('participants').insert([userProfile]);
-        localStorage.setItem('ggmh_user', JSON.stringify(userProfile));
+        await supabaseClient.from('participants').insert([newUser]);
+        closeModals();
+    }
+
+    async function updateUser() {
+        if (!currentEditToken) return;
+
+        const rName = document.getElementById('edit-name').value.trim();
+        const rTier = document.getElementById('edit-tier').value;
+        const rDmg = parseInt(document.getElementById('edit-damage').value);
+        const rIntro = document.getElementById('edit-intro').value.trim();
+        let rTeam = document.getElementById('edit-team').value.trim();
         
-        document.getElementById('join-modal').style.display = "none";
-        activateUserPanel();
+        if (rTeam === "") rTeam = null;
+
+        if (!rName || !rDmg || !rIntro) {
+            alert("모든 항목을 올바르게 입력해주세요.");
+            return;
+        }
+
+        await supabaseClient.from('participants')
+            .update({ real_name: rName, tier: rTier, avg_damage: rDmg, intro: rIntro, team_name: rTeam })
+            .eq('p_token', currentEditToken);
+            
+        closeModals();
     }
 
-    function activateUserPanel() {
-        document.getElementById('role-badge').innerText = `내 익명: ${userProfile.fake_name}`;
-        document.getElementById('bid-section').style.display = "block";
-    }
-
-    async function loadParticipantsData() {
-        const { data } = await supabaseClient.from('participants').select('*').order('created_at', { ascending: true });
-        if (!data) return;
-
-        initGrid();
+    async function deleteUser() {
+        if (!currentEditToken) return;
         
-        data.forEach((p, index) => {
-            if (index >= MAX_PARTICIPANTS) return;
-            const cell = document.getElementById(`cell-${index}`);
-            cell.className = "grid-cell active";
-            
-            let cellHTML = `
-                <div class="cell-name">${p.fake_name}</div>
-                <div class="cell-stats">${p.tier} | 딜량: ${p.avg_damage}</div>
-                <div class="cell-intro">"${p.intro}"</div>
-            `;
-            
-            if (p.team_name) {
-                cell.classList.add('teamed');
-                cellHTML += `<div class="team-label">[${p.team_name} 팀]</div>`;
-            }
-            
-            cell.innerHTML = cellHTML;
-        });
-
-        renderCompletedTeams(data);
-    }
-
-    async function submitBid() {
-        const inputObj = document.getElementById('input-amount');
-        const amount = parseInt(inputObj.value);
-        if (!amount || amount <= 0) return;
-
-        inputObj.disabled = true;
-
-        await supabaseClient.from('auction_bids').insert([{
-            p_token: userProfile.p_token,
-            real_name: userProfile.real_name,
-            fake_name: userProfile.fake_name,
-            bid_amount: amount
-        }]);
-
-        inputObj.disabled = false;
-        inputObj.value = "";
-        inputObj.focus();
-    }
-
-    async function loadExistingBids() {
-        const { data } = await supabaseClient.from('auction_bids').select('*').order('created_at', { ascending: false });
-        if (data) {
-            const list = document.getElementById('bid-list');
-            list.innerHTML = "";
-            data.forEach(bid => appendBid(bid, list));
+        if (confirm("정말로 이 참가자를 명단에서 삭제하시겠습니까?")) {
+            await supabaseClient.from('participants').delete().eq('p_token', currentEditToken);
+            closeModals();
         }
     }
 
-    function renderCompletedTeams(participantsData) {
-        const container = document.getElementById('team-list-container');
+    // 4명이 모인 팀을 추려 16개 그리드에 채워 넣는 함수
+    function renderCompletedTeams() {
         const teams = {};
         
+        // 팀 이름별로 인원 수집
         participantsData.forEach(p => {
             if (p.team_name) {
                 if (!teams[p.team_name]) teams[p.team_name] = [];
@@ -251,49 +296,40 @@
             }
         });
 
-        container.innerHTML = "";
-        let hasCompleted = false;
+        // 4명 이상인 팀만 필터링하여 배열로 변환 후 정렬 (예: 1팀, 2팀 순서대로 정렬)
+        const completedTeams = Object.entries(teams)
+            .filter(([teamName, members]) => members.length >= 4)
+            .sort((a, b) => a[0].localeCompare(b[0]));
 
-        for (const [teamName, members] of Object.entries(teams)) {
-            if (members.length >= 4) {
-                hasCompleted = true;
-                const teamDiv = document.createElement('div');
-                teamDiv.className = "team-container";
+        // 16개 셀 업데이트
+        for (let i = 0; i < MAX_TEAMS; i++) {
+            const cell = document.getElementById(`team-cell-${i}`);
+            
+            if (i < completedTeams.length) {
+                // 팀이 결성된 자리
+                const [teamName, members] = completedTeams[i];
+                cell.className = "team-cell active";
                 
-                let html = `<h4 class="team-title">${teamName} 팀</h4><div>`;
+                let html = `<h4 class="team-title">${teamName}</h4><div>`;
                 members.forEach(m => {
                     html += `<span class="team-member">${m.fake_name} (실명: ${m.real_name})</span>`;
                 });
                 html += `</div>`;
-                teamDiv.innerHTML = html;
-                container.appendChild(teamDiv);
+                cell.innerHTML = html;
+            } else {
+                // 아직 결성되지 않은 빈자리
+                cell.className = "team-cell empty";
+                cell.innerHTML = "팀 결성 대기 중";
             }
-        }
-
-        if (!hasCompleted) {
-            container.innerHTML = '<p style="color:#777; font-size:14px;">아직 4인이 모두 모인 팀이 없습니다.</p>';
         }
     }
 
     function subscribeRealtime() {
-        supabaseClient.channel('bids-channel')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'auction_bids' }, 
-            payload => {
-                const list = document.getElementById('bid-list');
-                appendBid(payload.new, list);
-            }).subscribe();
-
         supabaseClient.channel('teams-channel')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, 
             payload => {
                 loadParticipantsData();
             }).subscribe();
-    }
-
-    function appendBid(bid, listElement) {
-        const li = document.createElement('li');
-        li.innerHTML = `<span>${bid.fake_name}</span> <span class="amount">${bid.bid_amount.toLocaleString()} P</span>`;
-        listElement.insertBefore(li, listElement.firstChild);
     }
 </script>
 </body>
