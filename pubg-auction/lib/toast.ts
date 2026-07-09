@@ -1,0 +1,78 @@
+// lib/toast.ts
+// 어디서든(훅/유틸 포함) 호출 가능한 토스트 + 확인창 싱글턴 스토어.
+// <Toaster/>가 이 스토어를 구독해 실제 UI를 렌더한다.
+
+export type ToastKind = 'info' | 'success' | 'error';
+export type ToastItem = { id: number; kind: ToastKind; message: string };
+export type ConfirmItem = { id: number; message: string; resolve: (ok: boolean) => void };
+
+type State = { toasts: ToastItem[]; confirms: ConfirmItem[] };
+
+let state: State = { toasts: [], confirms: [] };
+const listeners = new Set<() => void>();
+let nextId = 1;
+
+const emit = () => { listeners.forEach((l) => l()); };
+
+export function subscribe(listener: () => void) {
+    listeners.add(listener);
+    return () => { listeners.delete(listener); };
+}
+
+export function getState(): State {
+    return state;
+}
+
+export const DEFAULT_TOAST_DURATION = 1500; // ms (기본 표시 시간)
+
+const timers = new Map<number, ReturnType<typeof setTimeout>>();
+
+function armTimer(id: number, duration: number) {
+    const prev = timers.get(id);
+    if (prev) clearTimeout(prev);
+    timers.set(id, setTimeout(() => dismissToast(id), duration));
+}
+
+// duration: ms. 0 이하이면 자동으로 사라지지 않고 클릭해야 닫힘.
+function pushToast(kind: ToastKind, message: string, duration = DEFAULT_TOAST_DURATION) {
+    // 동일한 토스트(종류+메시지)가 이미 떠 있으면 새로 쌓지 않고 표시 시간만 갱신
+    const existing = state.toasts.find((t) => t.kind === kind && t.message === message);
+    if (existing) {
+        if (duration > 0) armTimer(existing.id, duration);
+        return;
+    }
+
+    const id = nextId++;
+    state = { ...state, toasts: [...state.toasts, { id, kind, message }] };
+    emit();
+    if (duration > 0) armTimer(id, duration);
+}
+
+export function dismissToast(id: number) {
+    const t = timers.get(id);
+    if (t) { clearTimeout(t); timers.delete(id); }
+    state = { ...state, toasts: state.toasts.filter((t) => t.id !== id) };
+    emit();
+}
+
+export const toast = {
+    info: (message: string, duration?: number) => pushToast('info', message, duration),
+    success: (message: string, duration?: number) => pushToast('success', message, duration),
+    error: (message: string, duration?: number) => pushToast('error', message, duration),
+};
+
+// confirm() 대체: 확인/취소 결과를 Promise<boolean>로 반환
+export function confirmDialog(message: string): Promise<boolean> {
+    return new Promise((resolve) => {
+        const id = nextId++;
+        state = { ...state, confirms: [...state.confirms, { id, message, resolve }] };
+        emit();
+    });
+}
+
+export function resolveConfirm(id: number, ok: boolean) {
+    const item = state.confirms.find((c) => c.id === id);
+    state = { ...state, confirms: state.confirms.filter((c) => c.id !== id) };
+    emit();
+    item?.resolve(ok);
+}

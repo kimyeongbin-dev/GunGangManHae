@@ -54,7 +54,63 @@
 
 /* 우측 레이아웃 상/하 분할 */
 .rightPanel { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.auctionBoard { background: #1e1e1e; padding: 15px; border-radius: 8px; border: 1px solid #ff9800; flex: 0 0 auto; }
+/* 기존 auctionBoard 수정 (좌우 분할을 위해 flex 적용) */
+.auctionBoard { 
+    background: #1e1e1e; 
+    padding: 15px; 
+    border-radius: 8px; 
+    border: 1px solid #ff9800; 
+    flex: 0 0 auto; 
+    display: flex;       /* 추가됨 */
+    flex-direction: row;
+    gap: 20px;           /* 추가됨 */
+    min-height: 400px;   /* 로그창이 충분히 커지도록 최소 높이 지정 */
+}
+
+/* 새로 추가할 클래스들 */
+.auctionLeft {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.auctionRight {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.targetIntro {
+    background: #333;
+    padding: 15px;
+    border-radius: 6px;
+    font-style: italic;
+    font-size: 18px; /* 소갯말 크기 대폭 확대 */
+    font-weight: bold;
+    text-align: center;
+    margin: 15px 0 0 0;
+    color: #fff;
+    border-left: 4px solid #4caf50; /* 포인트 디자인 */
+    max-height: 120px;       /* 소개글이 길면 이 높이 안에서 스크롤 */
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.auctionLogContainer {
+    flex: 1 1 0;
+    min-height: 0;      /* flex 자식이 내용보다 작아질 수 있어야 스크롤이 걸림 */
+    max-height: 300px;  /* 로그가 길어지면 이 높이 안에서 스크롤 */
+    background: #111;
+    font-size: 13px; /* 폰트 크기도 살짝 키움 */
+    border: 1px solid #444;
+    padding: 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    border-radius: 4px;
+}
+
 .targetCard { background: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 15px; text-align: center; }
 .targetCard h2 { margin: 0 0 10px 0; color: #ff9800; }
 
@@ -75,6 +131,97 @@
 .teamMemberCell { width: 20%; }
 .emptyMember { color: #555; font-style: italic; }
 
+/* 팝업 외부 전체를 감싸는 영역 */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* 팝업 본체 */
+.detailModalContent {
+    background: #2b2b2b;
+    padding: 40px;
+    border-radius: 12px;
+    position: relative;
+    
+    /* 너비 고정의 핵심 */
+    width: 800px;           /* 기본 너비 */
+    min-width: 800px;       /* 최소 너비 */
+    max-width: 800px;       /* 최대 너비 (절대 안 커짐) */
+    
+    display: flex;
+    flex-direction: column;
+    color: #e0e0e0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border: 1px solid #444;
+    
+    /* 팝업 내부 콘텐츠가 밖으로 삐져나가지 않게 함 */
+    overflow: hidden; 
+}
+
+.introDisplay {
+    background: #1a1a1a;
+    padding: 20px;
+    border-left: 4px solid #ff9800;
+    margin: 20px 0;
+    font-size: 1.2rem;
+    font-style: italic;
+    color: #fff;
+    line-height: 1.6;
+    
+    /* 텍스트가 영역을 넘어가면 자동으로 줄바꿈 */
+    word-wrap: break-word;     /* 긴 단어 강제 줄바꿈 */
+    word-break: break-all;     /* 글자 단위로 쪼개기 */
+    white-space: pre-wrap;     /* 공백 유지 및 자동 줄바꿈 */
+    
+    overflow-y: auto;
+    max-height: 300px;
+}
+
+.infoGrid {
+    display: flex;
+    justify-content: center; /* 중앙 정렬 */
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.statBadge {
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 1rem;
+    color: #fff;
+    background: #444; /* 기본 배경 */
+}
+
+/* 티어별 컬러 강조 */
+.tier1Badge { background: #ff9800; }
+.tier2Badge { background: #2196f3; }
+.tier3Badge { background: #4caf50; }
+.tier4Badge { background: #757575; }
+
+/* 우측 상단 X 닫기 버튼 */
+.closeButton {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 20px;
+    cursor: pointer;
+}
+.closeButton:hover { color: white; }
+
+
 /* 커스텀 관리자 모달 */
 .modal { display: flex; justify-content: center; align-items: center; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); }
 .modalContent { background: #1e1e1e; padding: 25px; border: 1px solid #444; width: 90%; max-width: 450px; border-radius: 8px; }
@@ -83,3 +230,19 @@
 .modalButtons button { flex: 1; padding: 10px; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; color: white; }
 
 .editBadge { position: absolute; top: 0; right: 0; font-size: 8px; background: rgba(0,0,0,0.5); padding: 2px; }
+
+
+.adminControlPanel {
+    background: #252525;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #2196f3;
+    margin-top: 15px;
+}
+
+.bidPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 15px;
+}

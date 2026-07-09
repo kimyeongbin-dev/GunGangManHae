@@ -1,6 +1,7 @@
 // app/layout.tsx
 import type { Metadata } from 'next';
 import './globals.css'; // 이 줄이 반드시 있어야 전체 뼈대 디자인이 적용됩니다.
+import Toaster from '@/components/Toaster';
 
 export const metadata: Metadata = {
   title: 'PUBG 블라인드 팀 뽑기',
@@ -16,6 +17,7 @@ export default function RootLayout({
     <html lang="ko">
       <body>
         {children}
+        <Toaster />
       </body>
     </html>
   );

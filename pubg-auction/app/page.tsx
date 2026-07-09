@@ -2,24 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import styles from './page.module.css';
-import { supabase } from '@/lib/supabaseClient'; // (세팅 예정)
-import AuctionScreen from '@/components/AuctionScreen';
+import { supabase } from '../lib/supabaseClient'; // (경로 확인 필요 시 수정)
+import { toast, confirmDialog } from '../lib/toast';
+import AuctionScreen from '../components/AuctionScreen';
 
 // 메인 컴포넌트 임시 분리
-const DrawScreen = () => <div className={styles.placeholder}>1단계: 16인 추첨 화면 (준비 중)</div>;
-const ResultScreen = () => <div className={styles.placeholder}>3단계: 최종 팀 편성 결과 화면 (준비 중)</div>;
+const DrawScreen = () => <div style={{ padding: '20px', textAlign: 'center' }}>1단계: 16인 추첨 화면 (준비 중)</div>;
+const ResultScreen = () => <div style={{ padding: '20px', textAlign: 'center' }}>3단계: 최종 팀 편성 결과 화면 (준비 중)</div>;
 
 export default function MainApp() {
-  // 상태 관리 (중복 제거)
+  // 상태 관리
   const [currentView, setCurrentView] = useState<'draw' | 'auction' | 'result'>('auction');
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
     
-  // ⭐️ 핵심: 참가자들의 브라우저가 DB를 실시간으로 구독하는 로직
+  // 핵심: 참가자들의 브라우저가 DB를 실시간으로 구독하는 로직
   useEffect(() => {
     const channel = supabase
-      .channel('game_state_changes')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game_state' }, 
+      .channel('page_state_changes')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_state' }, 
         (payload) => {
           // DB 변경 감지 시 즉각 화면 전환
           setCurrentView(payload.new.current_page); 
@@ -34,16 +35,25 @@ export default function MainApp() {
   const changePageAsAdmin = async (pageName: 'draw' | 'auction' | 'result') => {
     setCurrentView(pageName); // 내 화면 즉시 변경
     // Supabase DB 업데이트 로직
-    await supabase.from('game_state').update({ current_page: pageName }).eq('id', 1); 
+    await supabase.from('page_state').update({ current_page: pageName }).eq('id', 1); 
   };
   
   // 진행자 인증 로직
   const handleAdminLogin = () => {
     if (adminCode === '0000') {
       setIsAdmin(true);
-      alert('진행자 모드로 전환되었습니다.');
+      toast.success('진행자 모드로 전환되었습니다.');
     } else {
-      alert('코드가 일치하지 않습니다.');
+      toast.error('코드가 일치하지 않습니다.');
+    }
+  };
+
+  // 진행자 모드 해제 로직
+  const handleAdminLogout = async () => {
+    if (await confirmDialog('진행자 모드를 해제하시겠습니까?')) {
+      setIsAdmin(false);
+      setAdminCode(''); // 입력된 코드 초기화
+      toast.info('일반 참가자 모드로 전환되었습니다.');
     }
   };
 
@@ -66,9 +76,12 @@ export default function MainApp() {
               <button onClick={handleAdminLogin} className={styles.btn}>진행자 인증</button>
             </div>
           ) : (
-            <div className={styles.navButtons}>
-              <span className={styles.adminBadge}>진행자 모드 활성화</span>
-              {/* 버튼 클릭 시 changePageAsAdmin 호출 */}
+            <div className={styles.navButtons} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span className={styles.adminBadge} style={{ color: '#4caf50', fontWeight: 'bold', marginRight: '10px' }}>
+                진행자 모드 활성화
+              </span>
+              
+              {/* 화면 전환 버튼들 */}
               <button 
                 onClick={() => changePageAsAdmin('draw')} 
                 className={`${styles.navBtn} ${currentView === 'draw' ? styles.active : ''}`}
@@ -86,6 +99,23 @@ export default function MainApp() {
                 className={`${styles.navBtn} ${currentView === 'result' ? styles.active : ''}`}
               >
                 3. 결과
+              </button>
+
+              {/* 추가된 모드 해제 버튼 */}
+              <button 
+                onClick={handleAdminLogout} 
+                style={{ 
+                  background: '#f44336', 
+                  padding: '5px 15px', 
+                  border: 'none', 
+                  color: 'white', 
+                  fontWeight: 'bold', 
+                  borderRadius: '4px', 
+                  cursor: 'pointer',
+                  marginLeft: '10px'
+                }}
+              >
+                모드 해제
               </button>
             </div>
           )}
