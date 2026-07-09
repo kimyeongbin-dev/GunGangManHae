@@ -2,7 +2,7 @@
 // 어디서든(훅/유틸 포함) 호출 가능한 토스트 + 확인창 싱글턴 스토어.
 // <Toaster/>가 이 스토어를 구독해 실제 UI를 렌더한다.
 
-export type ToastKind = 'info' | 'success' | 'error';
+export type ToastKind = 'info' | 'success' | 'error' | 'announce';
 export type ToastItem = { id: number; kind: ToastKind; message: string };
 export type ConfirmItem = { id: number; message: string; resolve: (ok: boolean) => void };
 
@@ -59,6 +59,8 @@ export const toast = {
     info: (message: string, duration?: number) => pushToast('info', message, duration),
     success: (message: string, duration?: number) => pushToast('success', message, duration),
     error: (message: string, duration?: number) => pushToast('error', message, duration),
+    // 방송 연출용 큰 알림 (경매 시작/입찰/낙찰 등) — 조금 더 오래 표시
+    announce: (message: string, duration?: number) => pushToast('announce', message, duration ?? 2500),
 };
 
 // confirm() 대체: 확인/취소 결과를 Promise<boolean>로 반환

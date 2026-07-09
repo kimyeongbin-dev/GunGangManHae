@@ -173,7 +173,7 @@ export function useTeamManagement({ participants, auctionBids, auctionTarget, au
         await supabase.from('auction_logs').insert({
             message: `낙찰 취소: ${participant.fake_name} (${prevTeam} 배정 해제)`,
         });
-        toast.info(`${participant.fake_name}의 낙찰이 취소되었습니다.`);
+        // 안내는 로그 기반 announce가 모두에게 표시
         return true;
     };
 
@@ -257,7 +257,7 @@ export function useTeamManagement({ participants, auctionBids, auctionTarget, au
             message: `경매 종료! 최종 낙찰: ${auctionTarget.fake_name} → ${winner.team_name} (${winner.bid_amount}P)`,
         });
 
-        toast.success(`낙찰 완료: ${auctionTarget.fake_name} → ${winner.team_name} (${winner.bid_amount}P)`);
+        // 낙찰 안내는 로그 기반 announce 토스트가 모든 접속자에게 표시함 (중복 방지 위해 여기선 생략)
         await clearTarget();
     };
 

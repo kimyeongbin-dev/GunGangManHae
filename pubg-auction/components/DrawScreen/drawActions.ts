@@ -36,6 +36,6 @@ export async function drawLeaders() {
     );
     if (results.find((r) => r.error)) { toast.error('팀장 추첨 중 오류가 발생했습니다.'); return; }
 
+    // 완료 안내는 로그 기반 announce가 모두에게 표시
     await supabase.from('auction_logs').insert({ message: `팀장 추첨 완료 (${TEAM_COUNT}팀)` });
-    toast.success('팀장 추첨이 완료되었습니다.');
 }

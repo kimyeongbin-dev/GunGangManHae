@@ -1,6 +1,7 @@
 // components/AuctionScreen/ui/TeamEntryTable.tsx
 // [렌더링] 팀 확정 엔트리 현황 (16팀 x 4티어 표)
 import styles from '../style.module.css';
+import fonts from '../../typography.module.css';
 import { TEAM_COUNT, TEAM_BUDGET } from '../types';
 import { participantLabel, teamLabel } from '../utils';
 import type { Participant } from '../types';
@@ -24,13 +25,10 @@ export default function TeamEntryTable({ participants, teamPoints, memberPrices,
 
     return (
         <div className={styles.teamListPanel}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: '5px 0', fontSize: '16px' }}>팀 확정 엔트리 현황</h3>
+            <div className={styles.teamHeader}>
+                <h3 className={`${fonts.sectionTitle} ${styles.teamTitle}`}>팀 확정 엔트리 현황</h3>
                 {isAdmin && (
-                    <button
-                        onClick={onResetAuction}
-                        style={{ background: '#f44336', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '12px', padding: '4px 10px', cursor: 'pointer', fontWeight: 'bold' }}
-                    >
+                    <button onClick={onResetAuction} className={`${fonts.smallBtn} ${styles.resetBtn}`}>
                         경매 전체 초기화
                     </button>
                 )}

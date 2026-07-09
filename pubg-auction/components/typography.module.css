@@ -1,0 +1,79 @@
+/* ================================================================
+   타이포그래피 (폰트 크기 한 곳에서 세부조절)
+   ----------------------------------------------------------------
+   · 기준 해상도: 1920px 화면에서 1rem = 16px  (globals.css의 유동 루트)
+   · 값은 rem 단위 → 화면 크기에 비례해 자연스럽게 커지고 줄어듦
+   · 각 클래스의 font-size 숫자만 바꾸면 해당 텍스트 크기가 조절됨
+     (rem → px 환산: 1rem=16px, 0.875rem=14px, 0.75rem=12px @1920)
+   ================================================================ */
+
+/* ===== 요소 기본 폰트 (style.module.css가 var로 참조) — 여기서 조절 ===== */
+:global(:root) {
+    --fs-grid-legend: 0.75rem;                          /* 그리드 티어 범례 */
+    --fs-grid-cell: clamp(6px, 1.6cqw, 12px);           /* 미배정 그리드 셀 (패널 폭 반응형) */
+    --fs-grid-cell-name-8col: clamp(9px, 2.4cqw, 15px); /* 8열 축소 시 익명 이름 */
+    --fs-target-intro: 1.125rem;                        /* 경매창 소갯말 */
+    --fs-log: 0.8125rem;                                /* 실시간 로그 본문 */
+    --fs-bid-btn: 1rem;                                 /* 입찰하기 버튼 */
+    --fs-team-table: 0.75rem;                           /* 팀 확정표 */
+    --fs-team-pts: 0.6875rem;                           /* 팀 포인트 */
+    --fs-intro-display: 1.2rem;                         /* 상세팝업 소개글 */
+    --fs-stat-badge: 1rem;                              /* 상세팝업 배지 */
+    --fs-close-btn: 1.25rem;                            /* 팝업 X 닫기 */
+    --fs-edit-badge: 0.5rem;                            /* 그리드 수정 배지 */
+}
+
+/* ===== 공통 ===== */
+
+/* 패널/섹션 제목 (경매 진행 창, 실시간 로그, 미배정 목록, 팀 확정 현황) */
+.sectionTitle { font-size: 1rem; font-weight: bold; }
+
+/* ===== 경매 진행 창 (AuctionPanel) ===== */
+
+/* 경매 타이머 (⏱ mm:ss) */
+.timer { font-size: 2rem; font-weight: bold; font-family: monospace; letter-spacing: 2px; }
+
+/* 현재 최고가 (숫자 강조) */
+.highestBid { font-size: 1.2rem; font-weight: bold; }
+
+/* 최고가 · 남은 예산 줄 바깥 래퍼 */
+.bidInfoRow { font-size: 0.875rem; }
+
+/* 실시간 로그 앞 [시각] 표기 */
+.logTime { font-size: 0.6875rem; }
+
+/* 로그 '전체 삭제' 미니 버튼 */
+.miniBtn { font-size: 0.6875rem; }
+
+/* ===== 팀 확정 현황 (TeamEntryTable) ===== */
+
+/* '경매 전체 초기화' 작은 버튼 */
+.smallBtn { font-size: 0.75rem; }
+
+/* ===== 참가자 등록/수정 모달 ===== */
+
+/* 폼 라벨 (비제이명, 티어, 딜량, 소갯말) */
+.formLabel { font-size: 0.875rem; }
+
+/* ===== 참가자 상세 팝업 ===== */
+
+/* 상태 안내문 (팀장/진행 중 등) */
+.detailNote { font-size: 0.9rem; font-weight: bold; }
+
+/* 하단 액션 버튼 (경매 대상 지정 / 낙찰 취소) */
+.detailActionBtn { font-size: 1rem; font-weight: bold; }
+
+/* ===== 팀장 추첨 (DrawScreen) ===== */
+
+.drawCount { font-size: 0.875rem; }         /* 제목 옆 (n/16팀) */
+.drawBtn { font-size: 0.9375rem; font-weight: bold; } /* '팀장 추첨' 버튼 */
+.teamCardLabel { font-size: 0.8125rem; }    /* 카드 상단 'N팀' */
+.teamCardName { font-size: 1rem; font-weight: bold; } /* 팀장 비제이명 */
+.tierChip { font-size: 0.75rem; }           /* 티어 칩 */
+
+/* ===== 알림 (Toaster) ===== */
+
+.toastText { font-size: 1rem; font-weight: 600; }      /* 일반 토스트 메시지 */
+.toastAnnounce { font-size: 1.75rem; font-weight: bold; } /* 방송용 큰 알림 (경매 시작/입찰/낙찰) */
+.confirmText { font-size: 0.9375rem; }                 /* 확인창 본문 */
+.confirmBtn { font-size: 0.875rem; }                   /* 확인창 버튼 */

@@ -2,6 +2,7 @@
 // [렌더링] 경매 진행 창 (대상자 정보 · 입찰/제어판 · 실시간 로그)
 import { useState } from 'react';
 import styles from '../style.module.css';
+import fonts from '../../typography.module.css';
 import { TEAM_COUNT, TEAM_BUDGET } from '../types';
 import { formatTime, participantLabel, teamLabel } from '../utils';
 import type { Participant, Log } from '../types';
@@ -51,7 +52,7 @@ export default function AuctionPanel({
         <div className={styles.auctionBoard}>
             {/* [좌측 구역] 참가자 정보 및 입찰 컨트롤 */}
             <div className={styles.auctionLeft}>
-                <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>
+                <h3 className={`${fonts.sectionTitle} ${styles.blockTitle}`}>
                     {isAdmin ? "경매 진행 제어판" : "경매 진행 창"}
                 </h3>
 
@@ -63,15 +64,15 @@ export default function AuctionPanel({
                     </div>
                 ) : (
                     <div className={styles.targetCard}>
-                        <h2 style={{ color: '#888' }}>대기 중</h2>
+                        <h2 className={styles.waitingText}>대기 중</h2>
                     </div>
                 )}
 
-                <div style={{ margin: '10px 0', fontSize: '14px', textAlign: 'center' }}>
-                    <div style={{ fontWeight: 'bold', color: '#ff9800', fontSize: '1.2rem' }}>
+                <div className={`${fonts.bidInfoRow} ${styles.bidInfoWrap}`}>
+                    <div className={`${fonts.highestBid} ${styles.highestBidText}`}>
                         현재 최고가: {currentHighestBid}P
                         {selectedTeam && (
-                            <span style={{ color: '#4caf50', marginLeft: 12 }}>
+                            <span className={styles.remainBudget}>
                                 | {selectedTeam} 남은 예산: {TEAM_BUDGET - (teamPoints[selectedTeam] ?? 0)}P
                             </span>
                         )}
@@ -79,18 +80,14 @@ export default function AuctionPanel({
                 </div>
 
                 {/* 진행자 vs 참가자 UI 분기 처리 */}
-                <div className={styles.formGroup} style={{ marginTop: 'auto' }}>
+                <div className={`${styles.formGroup} ${styles.controlDock}`}>
                     {isAdmin ? (
                         /* [진행자 전용 제어판] */
-                        <div className={styles.adminControlPanel} style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={onStartAuction} style={{ flex: 1, background: timeLeft > 0 ? '#9c27b0' : '#2196f3', padding: '12px', border: 'none', color: 'white', fontWeight: 'bold', borderRadius: '4px', cursor: 'pointer' }}>
+                        <div className={`${styles.adminControlPanel} ${styles.ctrlBtnRow}`}>
+                            <button onClick={onStartAuction} className={`${styles.ctrlBtn} ${timeLeft > 0 ? styles.ctrlBtnRestart : styles.ctrlBtnStart}`}>
                                 {timeLeft > 0 ? '재시작' : '경매 시작 (1분)'}
                             </button>
-                            <button
-                                onClick={onStopAuction}
-                                disabled={timeLeft <= 0}
-                                style={{ flex: 1, background: '#f44336', padding: '12px', border: 'none', color: 'white', fontWeight: 'bold', borderRadius: '4px', cursor: timeLeft <= 0 ? 'not-allowed' : 'pointer', opacity: timeLeft <= 0 ? 0.5 : 1 }}
-                            >
+                            <button onClick={onStopAuction} disabled={timeLeft <= 0} className={`${styles.ctrlBtn} ${styles.ctrlBtnStop}`}>
                                 경매 중단
                             </button>
                         </div>
@@ -110,7 +107,7 @@ export default function AuctionPanel({
                                 })}
                             </select>
                             <input type="number" placeholder="입찰 포인트" className={styles.formInput} value={bidInput} onChange={(e) => setBidInput(e.target.value)} disabled={timeLeft <= 0} />
-                            <button onClick={handleBid} className={styles.btnBid} disabled={timeLeft <= 0} style={{ opacity: timeLeft <= 0 ? 0.5 : 1, cursor: timeLeft <= 0 ? 'not-allowed' : 'pointer' }}>
+                            <button onClick={handleBid} className={styles.btnBid} disabled={timeLeft <= 0}>
                                 {timeLeft > 0 ? '입찰하기' : '경매 대기 중'}
                             </button>
                         </>
@@ -121,25 +118,14 @@ export default function AuctionPanel({
             {/* [우측 구역] 실시간 타이머 + 경매 로그 */}
             <div className={styles.auctionRight}>
                 {/* 실시간 공유 타이머 (진행자·참가자 모두에게 표시) */}
-                <div style={{
-                    textAlign: 'center',
-                    fontFamily: 'monospace',
-                    fontSize: '32px',
-                    fontWeight: 'bold',
-                    letterSpacing: '2px',
-                    color: timeLeft > 0 && timeLeft <= 10 ? '#ff4c4c' : '#ff9800',
-                    marginBottom: '10px',
-                }}>
+                <div className={`${fonts.timer} ${styles.timerBox} ${timeLeft > 0 && timeLeft <= 10 ? styles.timerUrgent : styles.timerNormal}`}>
                     ⏱ {formatTime(timeLeft)}
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                    <h3 style={{ margin: 0, fontSize: '16px', color: '#aaa' }}>실시간 경매 로그</h3>
+                <div className={styles.logHeaderRow}>
+                    <h3 className={`${fonts.sectionTitle} ${styles.logHeaderTitle}`}>실시간 경매 로그</h3>
                     {isAdmin && (
-                        <button
-                            onClick={onClearLogs}
-                            style={{ background: '#555', color: '#fff', border: 'none', borderRadius: '3px', fontSize: '11px', padding: '3px 8px', cursor: 'pointer' }}
-                        >
+                        <button onClick={onClearLogs} className={`${fonts.miniBtn} ${styles.clearLogsBtn}`}>
                             전체 삭제
                         </button>
                     )}
@@ -147,11 +133,11 @@ export default function AuctionPanel({
 
                 <div className={styles.auctionLogContainer}>
                     {logs.length === 0 ? (
-                        <div style={{ color: '#aaa' }}>시작 대기 중...</div>
+                        <div className={styles.logEmpty}>시작 대기 중...</div>
                     ) : (
                         logs.map((log) => (
-                            <div key={log.id} style={{ color: '#ccc', marginBottom: '5px', lineHeight: '1.4' }}>
-                                <span style={{ color: '#777', fontSize: '11px', marginRight: '5px' }}>
+                            <div key={log.id} className={styles.logRow}>
+                                <span className={`${fonts.logTime} ${styles.logTimeText}`}>
                                     [{new Date(log.created_at).toLocaleTimeString('ko-KR', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]
                                 </span>
                                 {log.message}

@@ -3,9 +3,9 @@
 import { useRealtimeAuction } from '../AuctionScreen/hooks/useRealtimeAuction';
 import { TEAM_COUNT } from '../AuctionScreen/types';
 import { confirmDialog } from '@/lib/toast';
+import fonts from '../typography.module.css';
+import styles from './style.module.css';
 import { drawLeaders } from './drawActions';
-
-const TIER_COLOR: Record<string, string> = { '1': '#ff9800', '2': '#2196f3', '3': '#4caf50', '4': '#9e9e9e' };
 
 export default function DrawScreen({ isAdmin }: { isAdmin: boolean }) {
     const { participants } = useRealtimeAuction();
@@ -17,44 +17,41 @@ export default function DrawScreen({ isAdmin }: { isAdmin: boolean }) {
     };
 
     return (
-        <div style={{ padding: 20, color: '#eee' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h2 style={{ margin: 0, color: '#ff9800' }}>
-                    1단계 · 팀장 추첨 <span style={{ fontSize: 14, color: '#aaa' }}>({leaders.length}/{TEAM_COUNT}팀)</span>
+        <div className={styles.wrap}>
+            <div className={styles.header}>
+                <h2 className={styles.title}>
+                    1단계 · 팀장 추첨 <span className={`${fonts.drawCount} ${styles.count}`}>({leaders.length}/{TEAM_COUNT}팀)</span>
                 </h2>
                 {isAdmin && (
-                    <button
-                        onClick={handleDraw}
-                        style={{ background: '#9c27b0', color: '#fff', border: 'none', borderRadius: 6, padding: '10px 20px', fontWeight: 'bold', fontSize: 15, cursor: 'pointer' }}
-                    >
+                    <button onClick={handleDraw} className={`${fonts.drawBtn} ${styles.drawBtn}`}>
                         {leaders.length > 0 ? '팀장 다시 추첨' : '팀장 추첨'}
                     </button>
                 )}
             </div>
 
             {leaders.length === 0 ? (
-                <div style={{ textAlign: 'center', color: '#888', padding: '60px 0' }}>
+                <div className={styles.empty}>
                     아직 팀장을 추첨하지 않았습니다.{isAdmin ? ' 우측 상단 “팀장 추첨”을 눌러 시작하세요.' : ''}
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, maxWidth: 760, margin: '0 auto' }}>
+                <div className={styles.grid}>
                     {Array.from({ length: TEAM_COUNT }).map((_, i) => {
                         const teamName = `${i + 1}팀`;
                         const leader = leaders.find((p) => p.team_name === teamName);
                         return (
-                            <div key={i} style={{ background: '#1e1e1e', border: '1px solid #333', borderRadius: 8, padding: 16 }}>
-                                <div style={{ color: '#777', fontSize: 13, marginBottom: 8 }}>{teamName}</div>
+                            <div key={i} className={styles.card}>
+                                <div className={`${fonts.teamCardLabel} ${styles.cardLabel}`}>{teamName}</div>
                                 {leader ? (
                                     <>
-                                        <div style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 6 }}>
-                                            {leader.real_name} <span style={{ color: '#ff9800' }}>(팀장)</span>
+                                        <div className={`${fonts.teamCardName} ${styles.cardName}`}>
+                                            {leader.real_name} <span className={styles.leaderTag}>(팀장)</span>
                                         </div>
-                                        <span style={{ background: TIER_COLOR[leader.tier] ?? '#555', color: '#fff', fontSize: 12, padding: '2px 8px', borderRadius: 10 }}>
+                                        <span className={`${fonts.tierChip} ${styles.chip} ${styles[`chipTier${leader.tier}`]}`}>
                                             {leader.tier}티어
                                         </span>
                                     </>
                                 ) : (
-                                    <div style={{ color: '#555' }}>미배정</div>
+                                    <div className={styles.unassigned}>미배정</div>
                                 )}
                             </div>
                         );

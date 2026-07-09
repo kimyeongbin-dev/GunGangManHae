@@ -43,6 +43,8 @@ export function useRealtimeAuction() {
                     if (prev.some((l) => l.id === newLog.id)) return prev;
                     return [newLog, ...prev].sort((a, b) => b.id - a.id).slice(0, 30);
                 });
+                // 모든 경매 로그는 진행자·참가자 모두에게 같은 큰 알림으로 표시(+방송 화면). toast 자체 중복제거로 재도착 안전.
+                toast.announce(newLog.message);
             })
             .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'auction_logs' }, () => {
                 setLogs([]);

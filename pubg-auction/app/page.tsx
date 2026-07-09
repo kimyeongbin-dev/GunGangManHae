@@ -9,7 +9,7 @@ import DrawScreen from '../components/DrawScreen';
 import { regenerateAnonymous } from '../components/AuctionScreen/anonActions';
 
 // 3단계 결과 화면 (준비 중)
-const ResultScreen = () => <div style={{ padding: '20px', textAlign: 'center' }}>3단계: 최종 팀 편성 결과 화면 (준비 중)</div>;
+const ResultScreen = () => <div className={styles.placeholder}>3단계: 최종 팀 편성 결과 화면 (준비 중)</div>;
 
 export default function MainApp() {
   // 상태 관리
@@ -86,22 +86,19 @@ export default function MainApp() {
               <button onClick={handleAdminLogin} className={styles.btn}>진행자 인증</button>
             </div>
           ) : (
-            <div className={styles.navButtons} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span className={styles.adminBadge} style={{ color: '#4caf50', fontWeight: 'bold', marginRight: '10px' }}>
+            <div className={styles.navButtons}>
+              <span className={styles.adminBadge}>
                 진행자 모드 활성화
               </span>
 
               {/* 익명 표시 토글 & 익명 자동 생성 */}
               <button
                 onClick={() => setRevealNames((v) => !v)}
-                style={{ background: revealNames ? '#4caf50' : '#555', color: '#fff', border: 'none', borderRadius: '4px', padding: '5px 12px', fontWeight: 'bold', cursor: 'pointer' }}
+                className={`${styles.headerBtn} ${revealNames ? styles.headerBtnActive : ''}`}
               >
                 {revealNames ? '실명 보는 중' : '익명 보는 중'}
               </button>
-              <button
-                onClick={regenerateAnonymous}
-                style={{ background: '#9c27b0', color: '#fff', border: 'none', borderRadius: '4px', padding: '5px 12px', fontWeight: 'bold', cursor: 'pointer' }}
-              >
+              <button onClick={regenerateAnonymous} className={styles.anonBtn}>
                 익명 만들기
               </button>
 
@@ -125,20 +122,8 @@ export default function MainApp() {
                 3. 결과
               </button>
 
-              {/* 추가된 모드 해제 버튼 */}
-              <button 
-                onClick={handleAdminLogout} 
-                style={{ 
-                  background: '#f44336', 
-                  padding: '5px 15px', 
-                  border: 'none', 
-                  color: 'white', 
-                  fontWeight: 'bold', 
-                  borderRadius: '4px', 
-                  cursor: 'pointer',
-                  marginLeft: '10px'
-                }}
-              >
+              {/* 모드 해제 버튼 */}
+              <button onClick={handleAdminLogout} className={styles.exitBtn}>
                 모드 해제
               </button>
             </div>
@@ -149,7 +134,7 @@ export default function MainApp() {
       {/* --- 메인 콘텐츠 (SPA 화면 전환 영역) --- */}
       <main className={styles.mainContent}>
         {currentView === null ? (
-          <div style={{ padding: '60px 20px', textAlign: 'center', color: '#888' }}>불러오는 중…</div>
+          <div className={styles.loading}>불러오는 중…</div>
         ) : (
           <>
             {currentView === 'draw' && <DrawScreen isAdmin={isAdmin} />}

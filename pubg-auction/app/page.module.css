@@ -33,3 +33,22 @@
   color: #4caf50;
   font-weight: bold;
 }
+
+/* 헤더 진행자 버튼 */
+.headerBtn {
+  background: #555;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.headerBtnActive { background: #4caf50; } /* 실명 보는 중(토글 ON) */
+.anonBtn { composes: headerBtn; background: #9c27b0; } /* 익명 만들기 */
+.exitBtn { composes: headerBtn; background: #f44336; } /* 모드 해제 */
+
+.navButtons { display: flex; align-items: center; gap: 10px; }
+.adminBadge { color: #4caf50; font-weight: bold; margin-right: 10px; }
+.loading { padding: 60px 20px; text-align: center; color: #888; }
+.placeholder { padding: 20px; text-align: center; }
