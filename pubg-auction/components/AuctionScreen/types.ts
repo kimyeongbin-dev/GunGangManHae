@@ -23,11 +23,11 @@ export type Log = {
     created_at: string;
 };
 
-// 참가자 등록/수정 모달 폼
+// 참가자 등록/수정 모달 폼 (익명 fake_name은 '익명 만들기'로 자동 생성 → 폼에 없음)
 export type ModalForm = {
     p_token: string;
     real_name: string;
-    fake_name: string;
+    tier: string;
     avg_damage: string;
     intro: string;
 };

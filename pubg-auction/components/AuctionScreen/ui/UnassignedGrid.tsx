@@ -8,11 +8,14 @@ import type { Participant } from '../types';
 type Props = {
     participants: Participant[];
     isAdmin: boolean;
+    showReal: boolean; // true면 실명(비제이명) 표시, false면 익명
     onCellClick: (slotIndex: number) => void;
     onEditParticipant: (participant: Participant, slotIndex: number) => void;
 };
 
-export default function UnassignedGrid({ participants, isAdmin, onCellClick, onEditParticipant }: Props) {
+export default function UnassignedGrid({ participants, isAdmin, showReal, onCellClick, onEditParticipant }: Props) {
+    const nameOf = (p: Participant) => (showReal ? p.real_name : (p.fake_name || '?'));
+
     return (
         <div className={styles.leftPanel}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -35,7 +38,7 @@ export default function UnassignedGrid({ participants, isAdmin, onCellClick, onE
                         <div key={i} className={cellClass} onClick={() => onCellClick(i)}>
                             {p && (
                                 <>
-                                    <span className={styles.nickText}>{p.fake_name}</span>
+                                    <span className={styles.nickText}>{nameOf(p)}</span>
                                     <span className={styles.damageText}>{p.avg_damage}</span>
                                     {isAdmin && (
                                         <div

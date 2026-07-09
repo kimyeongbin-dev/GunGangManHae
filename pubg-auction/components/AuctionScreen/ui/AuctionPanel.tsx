@@ -8,6 +8,7 @@ import type { Participant, Log } from '../types';
 
 type Props = {
     isAdmin: boolean;
+    showReal: boolean;
     auctionTarget: Participant | null;
     currentHighestBid: number;
     teamPoints: Record<string, number>; // 팀별 소비 포인트 (남은 예산 계산용)
@@ -22,6 +23,7 @@ type Props = {
 
 export default function AuctionPanel({
     isAdmin,
+    showReal,
     auctionTarget,
     currentHighestBid,
     teamPoints,
@@ -53,7 +55,7 @@ export default function AuctionPanel({
 
                 {auctionTarget ? (
                     <div className={styles.targetCard}>
-                        <h2>{isAdmin ? `${auctionTarget.fake_name} (${auctionTarget.real_name})` : auctionTarget.fake_name}</h2>
+                        <h2>{showReal ? auctionTarget.real_name : (auctionTarget.fake_name || '?')}</h2>
                         <p><strong>티어:</strong> {auctionTarget.tier}티어 | <strong>평균 딜량:</strong> {auctionTarget.avg_damage}</p>
                         <p className={styles.targetIntro}>&quot;{auctionTarget.intro}&quot;</p>
                     </div>

@@ -5,6 +5,7 @@ import styles from './page.module.css';
 import { supabase } from '../lib/supabaseClient'; // (경로 확인 필요 시 수정)
 import { toast, confirmDialog } from '../lib/toast';
 import AuctionScreen from '../components/AuctionScreen';
+import { regenerateAnonymous } from '../components/AuctionScreen/anonActions';
 
 // 메인 컴포넌트 임시 분리
 const DrawScreen = () => <div style={{ padding: '20px', textAlign: 'center' }}>1단계: 16인 추첨 화면 (준비 중)</div>;
@@ -15,6 +16,7 @@ export default function MainApp() {
   const [currentView, setCurrentView] = useState<'draw' | 'auction' | 'result'>('auction');
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
+  const [revealNames, setRevealNames] = useState(false); // 진행자 실명(비제이명) 공개 토글
     
   // 핵심: 참가자들의 브라우저가 DB를 실시간으로 구독하는 로직
   useEffect(() => {
@@ -80,7 +82,21 @@ export default function MainApp() {
               <span className={styles.adminBadge} style={{ color: '#4caf50', fontWeight: 'bold', marginRight: '10px' }}>
                 진행자 모드 활성화
               </span>
-              
+
+              {/* 익명 표시 토글 & 익명 자동 생성 */}
+              <button
+                onClick={() => setRevealNames((v) => !v)}
+                style={{ background: revealNames ? '#4caf50' : '#555', color: '#fff', border: 'none', borderRadius: '4px', padding: '5px 12px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                {revealNames ? '실명 보는 중' : '익명 보는 중'}
+              </button>
+              <button
+                onClick={regenerateAnonymous}
+                style={{ background: '#9c27b0', color: '#fff', border: 'none', borderRadius: '4px', padding: '5px 12px', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                익명 만들기
+              </button>
+
               {/* 화면 전환 버튼들 */}
               <button 
                 onClick={() => changePageAsAdmin('draw')} 
@@ -125,7 +141,7 @@ export default function MainApp() {
       {/* --- 메인 콘텐츠 (SPA 화면 전환 영역) --- */}
       <main className={styles.mainContent}>
         {currentView === 'draw' && <DrawScreen />}
-        {currentView === 'auction' && <AuctionScreen isAdmin={isAdmin} />}
+        {currentView === 'auction' && <AuctionScreen isAdmin={isAdmin} revealNames={revealNames} />}
         {currentView === 'result' && <ResultScreen />}
       </main>
     </div>

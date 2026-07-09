@@ -6,6 +6,7 @@ import { toast, confirmDialog } from '@/lib/toast';
 import { useRealtimeAuction } from './hooks/useRealtimeAuction';
 import { useAuctionTimer } from './hooks/useAuctionTimer';
 import { useTeamManagement } from './hooks/useTeamManagement';
+import { getTierBySlot } from './utils';
 import UnassignedGrid from './ui/UnassignedGrid';
 import AuctionPanel from './ui/AuctionPanel';
 import TeamEntryTable from './ui/TeamEntryTable';
@@ -13,9 +14,9 @@ import ParticipantDetailModal from './ui/ParticipantDetailModal';
 import ParticipantEditModal from './ui/ParticipantEditModal';
 import type { Participant, ModalForm } from './types';
 
-const EMPTY_FORM: ModalForm = { p_token: '', real_name: '', fake_name: '', avg_damage: '', intro: '' };
+const EMPTY_FORM: ModalForm = { p_token: '', real_name: '', tier: '1', avg_damage: '', intro: '' };
 
-export default function AuctionScreen({ isAdmin }: { isAdmin: boolean }) {
+export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boolean; revealNames: boolean }) {
     // --- 실시간 데이터 ---
     const { participants, auctionBids, logs, clearLogs } = useRealtimeAuction();
 
@@ -23,6 +24,7 @@ export default function AuctionScreen({ isAdmin }: { isAdmin: boolean }) {
     const [viewingTarget, setViewingTarget] = useState<Participant | null>(null); // 상세 보기
     const [editSlot, setEditSlot] = useState<number | null>(null);                // 편집 모달 대상 슬롯
     const [editForm, setEditForm] = useState<ModalForm>(EMPTY_FORM);
+    const showReal = isAdmin && revealNames; // 실명(비제이명) 표시 여부 (revealNames는 page.tsx에서 주입)
 
     // --- 타이머 로직 ---
     // 만료 시 자동 낙찰은 팀 로직에 위임. 훅 간 순환참조를 피하기 위해 ref 경유.
@@ -61,7 +63,7 @@ export default function AuctionScreen({ isAdmin }: { isAdmin: boolean }) {
         if (p) {
             setViewingTarget(p);
         } else if (isAdmin) {
-            setEditForm(EMPTY_FORM);
+            setEditForm({ ...EMPTY_FORM, tier: getTierBySlot(slotIndex) });
             setEditSlot(slotIndex);
         }
     };
@@ -71,7 +73,7 @@ export default function AuctionScreen({ isAdmin }: { isAdmin: boolean }) {
         setEditForm({
             p_token: p.p_token,
             real_name: p.real_name,
-            fake_name: p.fake_name,
+            tier: p.tier,
             avg_damage: p.avg_damage.toString(),
             intro: p.intro || '',
         });
@@ -110,6 +112,7 @@ export default function AuctionScreen({ isAdmin }: { isAdmin: boolean }) {
             <UnassignedGrid
                 participants={participants}
                 isAdmin={isAdmin}
+                showReal={showReal}
                 onCellClick={handleCellClick}
                 onEditParticipant={handleEditParticipant}
             />
@@ -118,6 +121,7 @@ export default function AuctionScreen({ isAdmin }: { isAdmin: boolean }) {
             <div className={styles.rightPanel}>
                 <AuctionPanel
                     isAdmin={isAdmin}
+                    showReal={showReal}
                     auctionTarget={auctionTarget}
                     currentHighestBid={team.currentHighestBid}
                     teamPoints={team.teamPoints}
@@ -134,6 +138,7 @@ export default function AuctionScreen({ isAdmin }: { isAdmin: boolean }) {
                     teamPoints={team.teamPoints}
                     memberPrices={team.memberPrices}
                     isAdmin={isAdmin}
+                    showReal={showReal}
                     onResetAuction={team.resetAuction}
                 />
             </div>
@@ -143,6 +148,7 @@ export default function AuctionScreen({ isAdmin }: { isAdmin: boolean }) {
                 <ParticipantDetailModal
                     target={viewingTarget}
                     isAdmin={isAdmin}
+                    showReal={showReal}
                     auctionRunning={auctionRunning}
                     finalPrice={team.memberPrices[viewingTarget.p_token] ?? 0}
                     onClose={() => setViewingTarget(null)}
@@ -154,7 +160,6 @@ export default function AuctionScreen({ isAdmin }: { isAdmin: boolean }) {
             {/* 진행자 참가자 편집 모달 */}
             {editSlot !== null && (
                 <ParticipantEditModal
-                    slotIndex={editSlot}
                     initialForm={editForm}
                     onSave={team.saveParticipant}
                     onDelete={team.deleteParticipant}

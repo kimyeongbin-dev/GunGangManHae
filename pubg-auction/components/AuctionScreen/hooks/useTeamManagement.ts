@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast, confirmDialog } from '@/lib/toast';
-import { getTierBySlot } from '../utils';
+import { firstFreeSlotInTier } from '../utils';
 import { TEAM_COUNT, TEAM_BUDGET } from '../types';
 import type { Participant, AuctionBid, ModalForm } from '../types';
 
@@ -53,29 +53,48 @@ export function useTeamManagement({ participants, auctionBids, auctionTarget, au
         return prices;
     }, [auctionBids]);
 
-    // [진행자] 참가자 정보 저장 (Upsert)
-    const saveParticipant = async (form: ModalForm, slotIndex: number): Promise<boolean> => {
-        const { p_token, real_name, fake_name, avg_damage, intro } = form;
-        if (!real_name || !fake_name || !avg_damage) {
-            toast.error('필수 값을 정확히 입력하세요.');
+    // [진행자] 참가자 등록/수정 (익명 fake_name은 '익명 만들기'로 별도 생성)
+    const saveParticipant = async (form: ModalForm): Promise<boolean> => {
+        const { p_token, real_name, tier, avg_damage, intro } = form;
+        if (!real_name || !tier || !avg_damage) {
+            toast.error('비제이명, 티어, 딜량을 입력하세요.');
             return false;
         }
 
-        const payload = {
-            p_token: p_token || `p_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            slot_index: slotIndex,
+        // 편집: 이름/티어/딜량/소갯말만 갱신 (익명 유지, 티어 변경 시에만 슬롯 이동)
+        if (p_token) {
+            const existing = participants.find((p) => p.p_token === p_token);
+            let slot_index = existing?.slot_index ?? null;
+            if (existing && existing.tier !== tier) {
+                const occupied = new Set(
+                    participants.filter((p) => p.p_token !== p_token && p.slot_index != null).map((p) => p.slot_index as number),
+                );
+                const free = firstFreeSlotInTier(tier, occupied);
+                if (free === -1) { toast.error(`${tier}티어 자리가 가득 찼습니다.`); return false; }
+                slot_index = free;
+            }
+            const { error } = await supabase.from('participants')
+                .update({ real_name, tier, avg_damage: parseInt(avg_damage), intro, slot_index })
+                .eq('p_token', p_token);
+            if (error) { toast.error('저장 에러: ' + error.message); return false; }
+            return true;
+        }
+
+        // 신규: 선택 티어의 첫 빈 슬롯에 배치, 익명은 빈 값으로 시작
+        const occupied = new Set(participants.filter((p) => p.slot_index != null).map((p) => p.slot_index as number));
+        const free = firstFreeSlotInTier(tier, occupied);
+        if (free === -1) { toast.error(`${tier}티어 자리가 가득 찼습니다.`); return false; }
+
+        const { error } = await supabase.from('participants').insert({
+            p_token: `p_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            slot_index: free,
+            tier,
             real_name,
-            fake_name,
-            tier: getTierBySlot(slotIndex),
+            fake_name: '',
             avg_damage: parseInt(avg_damage),
             intro,
-        };
-
-        const { error } = await supabase.from('participants').upsert(payload);
-        if (error) {
-            toast.error('저장 에러: ' + error.message);
-            return false;
-        }
+        });
+        if (error) { toast.error('저장 에러: ' + error.message); return false; }
         return true;
     };
 

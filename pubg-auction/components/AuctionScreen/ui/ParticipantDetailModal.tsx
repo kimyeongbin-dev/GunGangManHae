@@ -6,6 +6,7 @@ import type { Participant } from '../types';
 type Props = {
     target: Participant;
     isAdmin: boolean;
+    showReal: boolean;
     auctionRunning: boolean;
     finalPrice: number; // 낙찰가 (team_name 있을 때 의미)
     onClose: () => void;
@@ -13,14 +14,14 @@ type Props = {
     onRevertWin: (target: Participant) => void;
 };
 
-export default function ParticipantDetailModal({ target, isAdmin, auctionRunning, finalPrice, onClose, onAssignTarget, onRevertWin }: Props) {
+export default function ParticipantDetailModal({ target, isAdmin, showReal, auctionRunning, finalPrice, onClose, onAssignTarget, onRevertWin }: Props) {
     return (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.detailModalContent} onClick={(e) => e.stopPropagation()}>
                 <button className={styles.closeButton} onClick={onClose}>×</button>
 
                 {/* 핵심 정보 상단 배치 */}
-                <h2 style={{ margin: '0 0 10px 0', color: '#ff9800' }}>{target.fake_name}</h2>
+                <h2 style={{ margin: '0 0 10px 0', color: '#ff9800' }}>{showReal ? target.real_name : (target.fake_name || '?')}</h2>
                 <div className={styles.infoGrid}>
                     {/* 티어 배지: tier 값에 따라 클래스 동적 할당 */}
                     <span className={`${styles.statBadge} ${styles[`tier${target.tier}Badge`]}`}>
@@ -44,10 +45,10 @@ export default function ParticipantDetailModal({ target, isAdmin, auctionRunning
                         </>
                     )}
 
-                    {/* 진행자 전용 실명 표시 */}
-                    {isAdmin && (
+                    {/* 실명 공개 시에만 비제이명 표시 */}
+                    {showReal && (
                         <span className={styles.statBadge} style={{ background: '#333', border: '1px solid #555' }}>
-                            실명: {target.real_name}
+                            비제이명: {target.real_name}
                         </span>
                     )}
                 </div>

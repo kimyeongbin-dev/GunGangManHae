@@ -9,13 +9,14 @@ type Props = {
     teamPoints: Record<string, number>;
     memberPrices: Record<string, number>;
     isAdmin: boolean;
+    showReal: boolean;
     onResetAuction: () => void;
 };
 
-export default function TeamEntryTable({ participants, teamPoints, memberPrices, isAdmin, onResetAuction }: Props) {
+export default function TeamEntryTable({ participants, teamPoints, memberPrices, isAdmin, showReal, onResetAuction }: Props) {
     const renderMember = (m?: Participant) => {
         if (!m) return <span className={styles.emptyMember}>공석</span>;
-        const name = isAdmin ? `${m.fake_name}(${m.real_name})` : m.fake_name;
+        const name = showReal ? m.real_name : (m.fake_name || '?');
         return `${name} (${memberPrices[m.p_token] ?? 0}P)`;
     };
 
