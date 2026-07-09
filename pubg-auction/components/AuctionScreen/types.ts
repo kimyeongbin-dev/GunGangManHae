@@ -9,6 +9,7 @@ export type Participant = {
     avg_damage: number;
     intro: string;
     team_name: string | null;
+    is_leader: boolean; // 뽑기권(팀장) 여부 — 익명 제거, 비제이명(팀장)으로 공개
 };
 
 export type AuctionBid = {

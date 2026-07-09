@@ -10,6 +10,18 @@ export const getTierBySlot = (slotIndex: number): string => {
     return "1";
 };
 
+import type { Participant } from './types';
+
+// 참가자 표시 이름: 팀장은 항상 "비제이명(팀장)"으로 공개, 그 외엔 showReal에 따라 실명/익명.
+export const participantLabel = (p: Participant, showReal: boolean): string =>
+    p.is_leader ? `${p.real_name}(팀장)` : (showReal ? p.real_name : (p.fake_name || '?'));
+
+// 팀 표시 이름: "비제이명팀(N팀)". 팀장이 없으면 원래 "N팀".
+export const teamLabel = (teamName: string, participants: Participant[]): string => {
+    const leader = participants.find((p) => p.is_leader && p.team_name === teamName);
+    return leader ? `${leader.real_name}팀-${teamName}` : teamName;
+};
+
 // 티어(1~4) 행에서 비어있는 첫 슬롯 인덱스. 자리가 없으면 -1.
 // 그리드는 16열 × 4행(행=티어) 구조라, 티어 T의 슬롯 범위는 (T-1)*16 ~ (T-1)*16+15.
 export const firstFreeSlotInTier = (tier: string, occupied: Set<number>): number => {

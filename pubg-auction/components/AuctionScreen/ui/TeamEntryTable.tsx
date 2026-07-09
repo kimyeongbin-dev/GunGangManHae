@@ -2,6 +2,7 @@
 // [렌더링] 팀 확정 엔트리 현황 (16팀 x 4티어 표)
 import styles from '../style.module.css';
 import { TEAM_COUNT, TEAM_BUDGET } from '../types';
+import { participantLabel, teamLabel } from '../utils';
 import type { Participant } from '../types';
 
 type Props = {
@@ -16,8 +17,9 @@ type Props = {
 export default function TeamEntryTable({ participants, teamPoints, memberPrices, isAdmin, showReal, onResetAuction }: Props) {
     const renderMember = (m?: Participant) => {
         if (!m) return <span className={styles.emptyMember}>공석</span>;
-        const name = showReal ? m.real_name : (m.fake_name || '?');
-        return `${name} (${memberPrices[m.p_token] ?? 0}P)`;
+        // 팀장은 낙찰가 없이 "비제이명(팀장)", 그 외엔 이름과 낙찰가
+        if (m.is_leader) return participantLabel(m, showReal);
+        return `${participantLabel(m, showReal)} (${memberPrices[m.p_token] ?? 0}P)`;
     };
 
     return (
@@ -50,7 +52,7 @@ export default function TeamEntryTable({ participants, teamPoints, memberPrices,
 
                         return (
                             <tr key={i}>
-                                <td className={`${styles.teamTd} ${styles.teamIdentity}`}>[{teamName}] <span className={styles.teamPts}>{teamPoints[teamName]} / {TEAM_BUDGET} pts</span></td>
+                                <td className={`${styles.teamTd} ${styles.teamIdentity}`}>[{teamLabel(teamName, participants)}] <span className={styles.teamPts}>{teamPoints[teamName]} / {TEAM_BUDGET} pts</span></td>
                                 <td className={`${styles.teamTd} ${styles.teamMemberCell}`}>{renderMember(members.find((p) => p.tier === "1"))}</td>
                                 <td className={`${styles.teamTd} ${styles.teamMemberCell}`}>{renderMember(members.find((p) => p.tier === "2"))}</td>
                                 <td className={`${styles.teamTd} ${styles.teamMemberCell}`}>{renderMember(members.find((p) => p.tier === "3"))}</td>

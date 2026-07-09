@@ -1,7 +1,7 @@
 // components/AuctionScreen/ui/UnassignedGrid.tsx
 // [렌더링] 미배정 참가자 목록 (16x4 대기석 그리드)
 import styles from '../style.module.css';
-import { getTierBySlot } from '../utils';
+import { getTierBySlot, participantLabel } from '../utils';
 import { SLOT_COUNT } from '../types';
 import type { Participant } from '../types';
 
@@ -14,7 +14,7 @@ type Props = {
 };
 
 export default function UnassignedGrid({ participants, isAdmin, showReal, onCellClick, onEditParticipant }: Props) {
-    const nameOf = (p: Participant) => (showReal ? p.real_name : (p.fake_name || '?'));
+    const nameOf = (p: Participant) => participantLabel(p, showReal);
 
     return (
         <div className={styles.leftPanel}>

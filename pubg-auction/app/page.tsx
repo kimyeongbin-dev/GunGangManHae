@@ -5,27 +5,35 @@ import styles from './page.module.css';
 import { supabase } from '../lib/supabaseClient'; // (경로 확인 필요 시 수정)
 import { toast, confirmDialog } from '../lib/toast';
 import AuctionScreen from '../components/AuctionScreen';
+import DrawScreen from '../components/DrawScreen';
 import { regenerateAnonymous } from '../components/AuctionScreen/anonActions';
 
-// 메인 컴포넌트 임시 분리
-const DrawScreen = () => <div style={{ padding: '20px', textAlign: 'center' }}>1단계: 16인 추첨 화면 (준비 중)</div>;
+// 3단계 결과 화면 (준비 중)
 const ResultScreen = () => <div style={{ padding: '20px', textAlign: 'center' }}>3단계: 최종 팀 편성 결과 화면 (준비 중)</div>;
 
 export default function MainApp() {
   // 상태 관리
-  const [currentView, setCurrentView] = useState<'draw' | 'auction' | 'result'>('auction');
+  // null = page_state 아직 로드 전 (초기 경매창 반짝임 방지)
+  const [currentView, setCurrentView] = useState<'draw' | 'auction' | 'result' | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCode, setAdminCode] = useState('');
   const [revealNames, setRevealNames] = useState(false); // 진행자 실명(비제이명) 공개 토글
     
   // 핵심: 참가자들의 브라우저가 DB를 실시간으로 구독하는 로직
   useEffect(() => {
+    // 초기 로드: 현재 공유 페이지(page_state)를 반영 → 새 접속자도 같은 화면을 봄
+    (async () => {
+      const { data } = await supabase.from('page_state').select('current_page').eq('id', 1).maybeSingle();
+      setCurrentView((data?.current_page as 'draw' | 'auction' | 'result') ?? 'auction');
+    })();
+
     const channel = supabase
       .channel('page_state_changes')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_state' }, 
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_state' },
         (payload) => {
           // DB 변경 감지 시 즉각 화면 전환
-          setCurrentView(payload.new.current_page); 
+          const next = (payload.new as { current_page: 'draw' | 'auction' | 'result' }).current_page;
+          if (next) setCurrentView(next);
         }
       )
       .subscribe();
@@ -140,9 +148,15 @@ export default function MainApp() {
 
       {/* --- 메인 콘텐츠 (SPA 화면 전환 영역) --- */}
       <main className={styles.mainContent}>
-        {currentView === 'draw' && <DrawScreen />}
-        {currentView === 'auction' && <AuctionScreen isAdmin={isAdmin} revealNames={revealNames} />}
-        {currentView === 'result' && <ResultScreen />}
+        {currentView === null ? (
+          <div style={{ padding: '60px 20px', textAlign: 'center', color: '#888' }}>불러오는 중…</div>
+        ) : (
+          <>
+            {currentView === 'draw' && <DrawScreen isAdmin={isAdmin} />}
+            {currentView === 'auction' && <AuctionScreen isAdmin={isAdmin} revealNames={revealNames} />}
+            {currentView === 'result' && <ResultScreen />}
+          </>
+        )}
       </main>
     </div>
   );

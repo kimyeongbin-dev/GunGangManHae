@@ -82,6 +82,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
 
     // 상세 팝업에서 경매 대상 지정 (서버에 공유). 진행 중/이미 낙찰된 참가자는 불가.
     const handleAssignTarget = (p: Participant) => {
+        if (p.is_leader) { toast.error('팀장은 경매 대상이 될 수 없습니다.'); return; }
         if (p.team_name) { toast.error('이미 낙찰된 참가자입니다. 낙찰을 취소한 뒤 다시 올릴 수 있습니다.'); return; }
         if (auctionRunning) { toast.error('경매 진행 중에는 대상을 바꿀 수 없습니다.'); return; }
         timer.setTargetToken(p.p_token);
@@ -122,6 +123,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
                 <AuctionPanel
                     isAdmin={isAdmin}
                     showReal={showReal}
+                    participants={participants}
                     auctionTarget={auctionTarget}
                     currentHighestBid={team.currentHighestBid}
                     teamPoints={team.teamPoints}

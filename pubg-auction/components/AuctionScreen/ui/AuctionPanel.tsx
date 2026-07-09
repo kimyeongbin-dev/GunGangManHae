@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import styles from '../style.module.css';
 import { TEAM_COUNT, TEAM_BUDGET } from '../types';
-import { formatTime } from '../utils';
+import { formatTime, participantLabel, teamLabel } from '../utils';
 import type { Participant, Log } from '../types';
 
 type Props = {
     isAdmin: boolean;
     showReal: boolean;
+    participants: Participant[];
     auctionTarget: Participant | null;
     currentHighestBid: number;
     teamPoints: Record<string, number>; // 팀별 소비 포인트 (남은 예산 계산용)
@@ -24,6 +25,7 @@ type Props = {
 export default function AuctionPanel({
     isAdmin,
     showReal,
+    participants,
     auctionTarget,
     currentHighestBid,
     teamPoints,
@@ -55,7 +57,7 @@ export default function AuctionPanel({
 
                 {auctionTarget ? (
                     <div className={styles.targetCard}>
-                        <h2>{showReal ? auctionTarget.real_name : (auctionTarget.fake_name || '?')}</h2>
+                        <h2>{participantLabel(auctionTarget, showReal)}</h2>
                         <p><strong>티어:</strong> {auctionTarget.tier}티어 | <strong>평균 딜량:</strong> {auctionTarget.avg_damage}</p>
                         <p className={styles.targetIntro}>&quot;{auctionTarget.intro}&quot;</p>
                     </div>
@@ -102,7 +104,7 @@ export default function AuctionPanel({
                                     const blocked = ineligible.has(name);
                                     return (
                                         <option key={i} value={name} disabled={blocked}>
-                                            {name}{blocked ? ' (티어 완료)' : ''}
+                                            {teamLabel(name, participants)}{blocked ? ' (티어 완료)' : ''}
                                         </option>
                                     );
                                 })}

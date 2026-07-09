@@ -211,11 +211,11 @@ export function useTeamManagement({ participants, auctionBids, auctionTarget, au
         const { error: bidErr } = await supabase.from('auction_bids').delete().neq('id', 0);
         if (bidErr) { toast.error('입찰 내역 삭제 실패: ' + bidErr.message); return false; }
 
-        // 2) 팀 배정 전체 해제
+        // 2) 팀 배정 해제 — 단, 팀장(is_leader)은 팀을 유지하고 경매로 채운 팀원만 초기화
         const { error: teamErr } = await supabase
             .from('participants')
             .update({ team_name: null })
-            .not('team_name', 'is', null);
+            .eq('is_leader', false);
         if (teamErr) { toast.error('팀 배정 해제 실패: ' + teamErr.message); return false; }
 
         // 3) 타이머/상태/경매 대상 초기화
