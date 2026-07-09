@@ -1,0 +1,85 @@
+/* components/AuctionScreen/style.module.css */
+.container { 
+    display: flex; 
+    gap: 15px; 
+    flex-direction: column;
+}
+
+/* 좌측: 미배정 참가자 8x8 그리드 */
+.leftPanel { 
+    flex: 0.8; 
+    background: #1e1e1e; 
+    padding: 10px; 
+    border-radius: 8px; 
+    display: flex; 
+    flex-direction: column; 
+}
+.gridLegend { display: flex; gap: 15px; margin-bottom: 10px; font-size: 12px; justify-content: flex-end; }
+.legendItem { display: flex; align-items: center; gap: 5px; }
+.legendBox { width: 12px; height: 12px; border-radius: 2px; }
+.gridContainer { display: grid; grid-template-columns: repeat(16, 1fr); gap: 4px; flex: 1; }
+
+.gridCell { 
+    position: relative; 
+    width: 100%; 
+    aspect-ratio: 1; 
+    border: 1px dashed #555; 
+    background: #222; 
+    border-radius: 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px; 
+    color: #fff;
+    cursor: pointer;
+}
+.gridCell:hover { background: #333; border-color: #888; }
+.occupied { border-style: solid; font-weight: bold;}
+.nickText { color: #ffeb3b; } 
+.damageText { color: #ffffff; }
+
+/* 티어별 색상 가이드 */
+.tier1 { border-color: #ff9800; }
+.tier2 { border-color: #2196f3; }
+.tier3 { border-color: #4caf50; }
+.tier4 { border-color: #9e9e9e; }
+
+/* 인원이 들어왔을 때 색상 채우기 */
+.occupied.tier1 { background: rgba(255, 152, 0, 0.3); border-style: solid; }
+.occupied.tier2 { background: rgba(33, 150, 243, 0.3); border-style: solid; }
+.occupied.tier3 { background: rgba(76, 175, 80, 0.3); border-style: solid; }
+.occupied.tier4 { background: rgba(158, 158, 158, 0.3); border-style: solid; }
+.assigned { opacity: 0.4; border-style: dotted; }
+
+/* 우측 레이아웃 상/하 분할 */
+.rightPanel { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.auctionBoard { background: #1e1e1e; padding: 15px; border-radius: 8px; border: 1px solid #ff9800; flex: 0 0 auto; }
+.targetCard { background: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 15px; text-align: center; }
+.targetCard h2 { margin: 0 0 10px 0; color: #ff9800; }
+
+.formGroup { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+
+/* 자식 선택자 인식 오류를 해결하기 위해 독립 클래스로 분리 */
+.formInput, .formSelect { padding: 10px; background: #333; border: 1px solid #555; color: white; border-radius: 4px; }
+.btnBid { width: 100%; padding: 12px; background: #ff9800; border: none; color: white; font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 4px; }
+.btnBid:hover { background: #e68a00; }
+
+/* 우측 하단: 팀 확정 엔트리 현황 */
+.teamListPanel { background: #1e1e1e; padding: 10px; border-radius: 8px; border: 1px solid #333; flex: 1; overflow-y: auto; }
+.teamTable { width: 100%; border-collapse: collapse; font-size: 12px; }
+.teamTh { position: sticky; top: 0; background: #2d2d2d; padding: 6px; border: 1px solid #333; }
+.teamTd { padding: 5px; border: 1px solid #333; text-align: center; }
+.teamIdentity { background: #252525; width: 20%; font-weight: bold; }
+.teamPts { color: #ff9800; display: block; font-size: 11px; margin-top: 2px; }
+.teamMemberCell { width: 20%; }
+.emptyMember { color: #555; font-style: italic; }
+
+/* 커스텀 관리자 모달 */
+.modal { display: flex; justify-content: center; align-items: center; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); }
+.modalContent { background: #1e1e1e; padding: 25px; border: 1px solid #444; width: 90%; max-width: 450px; border-radius: 8px; }
+.modalContent h3 { margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; color: #4caf50; }
+.modalButtons { display: flex; gap: 10px; margin-top: 15px; }
+.modalButtons button { flex: 1; padding: 10px; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; color: white; }
+
+.editBadge { position: absolute; top: 0; right: 0; font-size: 8px; background: rgba(0,0,0,0.5); padding: 2px; }

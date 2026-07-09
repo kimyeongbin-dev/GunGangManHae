@@ -1,0 +1,11 @@
+/* app/globals.css */
+body {
+  font-family: 'Malgun Gothic', sans-serif;
+  background-color: #121212;
+  color: #ffffff;
+  margin: 0;
+  padding: 15px;
+}
+* {
+  box-sizing: border-box;
+}
