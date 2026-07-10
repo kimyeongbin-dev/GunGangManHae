@@ -1,25 +1,100 @@
 /* components/DrawScreen/style.module.css */
-.wrap { padding: 20px; color: #eee; }
-.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.title { margin: 0; color: #ff9800; }
-.count { color: #aaa; }
-.headerActions { display: flex; gap: 10px; }
-.drawBtn { background: #9c27b0; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer; }
-.releaseBtn { background: #f44336; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer; }
-.empty { text-align: center; color: #888; padding: 60px 0; }
+.wrap {
+    color: #eee;
+    padding: 20px;
+}
+.header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    justify-content: space-between;
+}
+.title {
+    color: #ff9800;
+    margin: 0;
+}
+.count {
+    color: #aaa;
+}
+.headerActions {
+    gap: 10px;
+    display: flex;
+}
+.drawBtn {
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    padding: 10px 20px;
+    background: #9c27b0;
+    border-radius: 6px;
+}
+.releaseBtn {
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    padding: 10px 20px;
+    background: #f44336;
+    border-radius: 6px;
+}
+.empty {
+    color: #888;
+    padding: 60px 0;
+    text-align: center;
+}
 
-.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 760px; margin: 0 auto; }
-.card { background: #1e1e1e; border: 1px solid #333; border-radius: 8px; padding: 16px; }
-.cardLabel { color: #777; margin-bottom: 8px; }
-.cardName { margin-bottom: 6px; }
-.leaderTag { color: #ff9800; }
-.unassigned { color: #555; }
-.pinBox { margin-top: 8px; font-size: 0.8rem; color: #aaa; letter-spacing: 0.05em; }
-.pinBox b { color: #4caf50; font-size: 1rem; letter-spacing: 0.15em; }
+.grid {
+    gap: 12px;
+    margin: 0 auto;
+    display: grid;
+    max-width: 760px;
+    grid-template-columns: repeat(4, 1fr);
+}
+.card {
+    border: 1px solid #333;
+    padding: 16px;
+    background: #1e1e1e;
+    border-radius: 8px;
+}
+.cardLabel {
+    color: #777;
+    margin-bottom: 8px;
+}
+.cardName {
+    margin-bottom: 6px;
+}
+.leaderTag {
+    color: #ff9800;
+}
+.unassigned {
+    color: #555;
+}
+.pinBox {
+    color: #aaa;
+    font-size: 0.8rem;
+    margin-top: 8px;
+    letter-spacing: 0.05em;
+}
+.pinBox b {
+    color: #4caf50;
+    font-size: 1rem;
+    letter-spacing: 0.15em;
+}
 
 /* 티어 칩 (색상은 티어별 모디파이어) */
-.chip { color: #fff; padding: 2px 8px; border-radius: 10px; }
-.chipTier1 { background: #ff9800; }
-.chipTier2 { background: #2196f3; }
-.chipTier3 { background: #4caf50; }
-.chipTier4 { background: #9e9e9e; }
+.chip {
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+.chipTier1 {
+    background: #ff9800;
+}
+.chipTier2 {
+    background: #2196f3;
+}
+.chipTier3 {
+    background: #4caf50;
+}
+.chipTier4 {
+    background: #9e9e9e;
+}

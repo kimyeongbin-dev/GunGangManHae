@@ -6,81 +6,149 @@
    동적 상태는 인라인이 아니라 modifier 클래스로 처리(예: .timerUrgent, .ctrlBtnStop).
    ================================================================ */
 .container {
-    display: flex; 
-    gap: 15px; 
+    gap: 15px;
+    display: flex;
     flex-direction: column;
 }
 
 /* 좌측: 미배정 참가자 8x8 그리드 */
 .leftPanel {
     flex: 0.8;
-    background: #1e1e1e;
-    padding: 10px;
-    border-radius: 8px;
     display: flex;
-    flex-direction: column;
+    padding: 10px;
+    background: #1e1e1e;
+    border-radius: 8px;
     container-type: inline-size; /* 이 패널 너비 기준으로 그리드 반응형 처리 */
+    flex-direction: column;
 }
-.gridLegend { display: flex; gap: 15px; margin-bottom: 10px; font-size: var(--fs-grid-legend); justify-content: flex-end; }
-.legendItem { display: flex; align-items: center; gap: 5px; }
-.legendBox { width: 12px; height: 12px; border-radius: 2px; }
-.gridContainer { display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: 4px; flex: 1; }
+.gridLegend {
+    gap: 15px;
+    display: flex;
+    font-size: var(--fs-grid-legend);
+    margin-bottom: 10px;
+    justify-content: flex-end;
+}
+.legendItem {
+    gap: 5px;
+    display: flex;
+    align-items: center;
+}
+.legendBox {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+.gridContainer {
+    gap: 4px;
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(16, minmax(0, 1fr));
+}
 
 .gridCell {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 1;
-    min-width: 0;
-    overflow: hidden;
-    border: 1px dashed #555;
-    background: #222;
-    border-radius: 2px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--fs-grid-cell);
     color: #fff;
+    width: 100%;
+    border: 1px dashed #555;
     cursor: pointer;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    font-size: var(--fs-grid-cell);
+    min-width: 0;
+    background: #222;
+    align-items: center;
+    aspect-ratio: 1;
+    border-radius: 2px;
+    flex-direction: column;
+    justify-content: center;
 }
-.gridCell:hover { background: #333; border-color: #888; }
-.occupied { border-style: solid; font-weight: bold;}
-.nickText { color: #ffeb3b; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.damageText { color: #ffffff; }
+.gridCell:hover {
+    background: #333;
+    border-color: #888;
+}
+.occupied {
+    font-weight: bold;
+    border-style: solid;
+}
+.nickText {
+    color: #ffeb3b;
+    overflow: hidden;
+    max-width: 100%;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.damageText {
+    color: #ffffff;
+}
 
 /* 참가자 목록 폭이 줄면(창 축소) 8열로 전환 + 딜량 숨기고 익명만 */
 @container (max-width: 1000px) {
-    .gridContainer { grid-template-columns: repeat(8, minmax(0, 1fr)); }
-    .damageText { display: none; }
-    .nickText { font-size: var(--fs-grid-cell-name-8col); }
+    .gridContainer {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+    .damageText {
+        display: none;
+    }
+    .nickText {
+        font-size: var(--fs-grid-cell-name-8col);
+    }
 }
 
 /* 티어별 색상 가이드 */
-.tier1 { border-color: #ff9800; }
-.tier2 { border-color: #2196f3; }
-.tier3 { border-color: #4caf50; }
-.tier4 { border-color: #9e9e9e; }
+.tier1 {
+    border-color: #ff9800;
+}
+.tier2 {
+    border-color: #2196f3;
+}
+.tier3 {
+    border-color: #4caf50;
+}
+.tier4 {
+    border-color: #9e9e9e;
+}
 
 /* 인원이 들어왔을 때 색상 채우기 */
-.occupied.tier1 { background: rgba(255, 152, 0, 0.3); border-style: solid; }
-.occupied.tier2 { background: rgba(33, 150, 243, 0.3); border-style: solid; }
-.occupied.tier3 { background: rgba(76, 175, 80, 0.3); border-style: solid; }
-.occupied.tier4 { background: rgba(158, 158, 158, 0.3); border-style: solid; }
-.assigned { opacity: 0.4; border-style: dotted; }
+.occupied.tier1 {
+    background: rgba(255, 152, 0, 0.3);
+    border-style: solid;
+}
+.occupied.tier2 {
+    background: rgba(33, 150, 243, 0.3);
+    border-style: solid;
+}
+.occupied.tier3 {
+    background: rgba(76, 175, 80, 0.3);
+    border-style: solid;
+}
+.occupied.tier4 {
+    background: rgba(158, 158, 158, 0.3);
+    border-style: solid;
+}
+.assigned {
+    opacity: 0.4;
+    border-style: dotted;
+}
 
 /* 우측 레이아웃 상/하 분할 */
-.rightPanel { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.rightPanel {
+    gap: 10px;
+    flex: 1;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+}
 /* 기존 auctionBoard 수정 (좌우 분할을 위해 flex 적용) */
-.auctionBoard { 
-    background: #1e1e1e; 
-    padding: 15px; 
-    border-radius: 8px; 
-    border: 1px solid #ff9800; 
-    flex: 0 0 auto; 
-    display: flex;       /* 추가됨 */
+.auctionBoard {
+    gap: 20px; /* 추가됨 */
+    flex: 0 0 auto;
+    border: 1px solid #ff9800;
+    display: flex; /* 추가됨 */
+    padding: 15px;
+    background: #1e1e1e;
+    min-height: 400px; /* 로그창이 충분히 커지도록 최소 높이 지정 */
+    border-radius: 8px;
     flex-direction: row;
-    gap: 20px;           /* 추가됨 */
-    min-height: 400px;   /* 로그창이 충분히 커지도록 최소 높이 지정 */
 }
 
 /* 새로 추가할 클래스들 */
@@ -97,247 +165,533 @@
 }
 
 .targetIntro {
-    background: #333;
-    padding: 15px;
-    border-radius: 6px;
-    font-style: italic;
-    font-size: var(--fs-target-intro);
-    font-weight: bold;
-    text-align: center;
-    margin: 15px 0 0 0;
     color: #fff;
-    border-left: 4px solid #4caf50; /* 포인트 디자인 */
-    max-height: 120px;       /* 소개글이 길면 이 높이 안에서 스크롤 */
+    margin: 15px 0 0 0;
+    padding: 15px;
+    font-size: var(--fs-target-intro);
+    background: #333;
+    font-style: italic;
+    max-height: 120px; /* 소개글이 길면 이 높이 안에서 스크롤 */
     overflow-y: auto;
-    white-space: pre-wrap;
+    text-align: center;
     word-break: break-word;
+    border-left: 4px solid #4caf50; /* 포인트 디자인 */
+    font-weight: bold;
+    white-space: pre-wrap;
+    border-radius: 6px;
 }
 
 .auctionLogContainer {
     flex: 1 1 0;
-    min-height: 0;      /* flex 자식이 내용보다 작아질 수 있어야 스크롤이 걸림 */
-    max-height: 300px;  /* 로그가 길어지면 이 높이 안에서 스크롤 */
-    background: #111;
-    font-size: var(--fs-log);
     border: 1px solid #444;
-    padding: 10px;
-    overflow-y: auto;
     display: flex;
-    flex-direction: column;
+    padding: 10px;
+    font-size: var(--fs-log);
+    background: #111;
+    max-height: 300px; /* 로그가 길어지면 이 높이 안에서 스크롤 */
+    min-height: 0; /* flex 자식이 내용보다 작아질 수 있어야 스크롤이 걸림 */
+    overflow-y: auto;
     border-radius: 4px;
+    flex-direction: column;
 }
 
-.targetCard { background: #2a2a2a; padding: 15px; border-radius: 6px; margin-bottom: 15px; text-align: center; }
-.targetCard h2 { margin: 0 0 10px 0; color: #ff9800; }
+.targetCard {
+    padding: 15px;
+    background: #2a2a2a;
+    text-align: center;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+.targetCard h2 {
+    color: #ff9800;
+    margin: 0 0 10px 0;
+}
 
-.formGroup { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.formGroup {
+    gap: 6px;
+    display: flex;
+    margin-bottom: 12px;
+    flex-direction: column;
+}
 
 /* 자식 선택자 인식 오류를 해결하기 위해 독립 클래스로 분리 */
-.formInput, .formSelect { padding: 10px; background: #333; border: 1px solid #555; color: white; border-radius: 4px; }
-.btnBid { width: 100%; padding: 12px; background: #ff9800; border: none; color: white; font-weight: bold; font-size: var(--fs-bid-btn); cursor: pointer; border-radius: 4px; }
-.btnBid:hover { background: #e68a00; }
+.formInput,
+.formSelect {
+    color: white;
+    border: 1px solid #555;
+    padding: 10px;
+    background: #333;
+    border-radius: 4px;
+}
+.btnBid {
+    color: white;
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    padding: 12px;
+    font-size: var(--fs-bid-btn);
+    background: #ff9800;
+    font-weight: bold;
+    border-radius: 4px;
+}
+.btnBid:hover {
+    background: #e68a00;
+}
 
 /* 우측 하단: 팀 확정 엔트리 현황 */
-.teamListPanel { background: #1e1e1e; padding: 10px; border-radius: 8px; border: 1px solid #333; flex: 1; overflow-y: auto; }
-.teamTable { width: 100%; border-collapse: collapse; font-size: var(--fs-team-table); }
-.teamTh { position: sticky; top: 0; background: #2d2d2d; padding: 6px; border: 1px solid #333; }
-.teamTd { padding: 5px; border: 1px solid #333; text-align: center; }
-.teamIdentity { background: #252525; width: 20%; font-weight: bold; }
-.teamPts { color: #ff9800; display: block; font-size: var(--fs-team-pts); margin-top: 2px; }
-.teamMemberCell { width: 20%; }
-.emptyMember { color: #555; font-style: italic; }
+.teamListPanel {
+    flex: 1;
+    border: 1px solid #333;
+    padding: 10px;
+    background: #1e1e1e;
+    overflow-y: auto;
+    border-radius: 8px;
+}
+.teamTable {
+    width: 100%;
+    font-size: var(--fs-team-table);
+    border-collapse: collapse;
+}
+.teamTh {
+    top: 0;
+    border: 1px solid #333;
+    padding: 6px;
+    position: sticky;
+    background: #2d2d2d;
+}
+.teamTd {
+    border: 1px solid #333;
+    padding: 5px;
+    text-align: center;
+}
+.teamIdentity {
+    width: 20%;
+    background: #252525;
+    font-weight: bold;
+}
+.teamPts {
+    color: #ff9800;
+    display: block;
+    font-size: var(--fs-team-pts);
+    margin-top: 2px;
+}
+.teamMemberCell {
+    width: 20%;
+}
+.emptyMember {
+    color: #555;
+    font-style: italic;
+}
 /* 팀원 셀 클릭 → 상세 팝업 (셀 텍스트 스타일을 그대로 상속) */
 .memberLink {
-    background: none;
-    border: none;
-    padding: 0;
-    margin: 0;
     font: inherit;
     color: inherit;
+    border: none;
     cursor: pointer;
+    margin: 0;
+    padding: 0;
+    background: none;
     text-align: left;
 }
-.memberLink:hover { text-decoration: underline; }
+.memberLink:hover {
+    text-decoration: underline;
+}
 
 /* 팝업 외부 전체를 감싸는 영역 */
 .modalOverlay {
-    position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.7);
     display: flex;
-    justify-content: center;
-    align-items: center;
     z-index: 9999;
+    position: fixed;
+    background: rgba(0, 0, 0, 0.7);
+    align-items: center;
+    justify-content: center;
 }
 
 /* 팝업 본체 */
 .detailModalContent {
-    background: #2b2b2b;
     padding: 40px;
-    border-radius: 12px;
     position: relative;
-    
+    background: #2b2b2b;
+    border-radius: 12px;
+
     /* 반응형 너비: 기본(이상적) 800px, 창이 좁아지면 92vw까지 줄어듦(창 밖으로 안 넘침) */
     width: min(800px, 92vw); /* 넓은 화면 800px, 좁아지면 92vw */
-    max-width: 800px;        /* 800px보다 커지지 않음 */
-    max-height: 90vh;        /* 세로도 화면 안에 */
+    max-width: 800px; /* 800px보다 커지지 않음 */
+    max-height: 90vh; /* 세로도 화면 안에 */
     overflow-y: auto;
 
-    display: flex;
-    flex-direction: column;
     color: #e0e0e0;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     border: 1px solid #444;
-    
+    display: flex;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    flex-direction: column;
+
     /* 가로 삐져나감만 숨김 (세로는 위에서 auto 스크롤) */
     overflow-x: hidden;
 }
 
 .introDisplay {
-    background: #1a1a1a;
-    padding: 20px;
-    border-left: 4px solid #ff9800;
-    margin: 20px 0;
-    font-size: var(--fs-intro-display);
-    font-style: italic;
     color: #fff;
+    margin: 20px 0;
+    padding: 20px;
+    font-size: var(--fs-intro-display);
+    background: #1a1a1a;
+    font-style: italic;
+    border-left: 4px solid #ff9800;
     line-height: 1.6;
-    
+
     /* 텍스트가 영역을 넘어가면 자동으로 줄바꿈 */
-    word-wrap: break-word;     /* 긴 단어 강제 줄바꿈 */
-    word-break: break-all;     /* 글자 단위로 쪼개기 */
-    white-space: pre-wrap;     /* 공백 유지 및 자동 줄바꿈 */
-    
-    overflow-y: auto;
+    word-wrap: break-word; /* 긴 단어 강제 줄바꿈 */
+    word-break: break-all; /* 글자 단위로 쪼개기 */
+    white-space: pre-wrap; /* 공백 유지 및 자동 줄바꿈 */
+
     max-height: 300px;
+    overflow-y: auto;
 }
 
 .infoGrid {
-    display: flex;
-    justify-content: center; /* 중앙 정렬 */
     gap: 20px;
+    display: flex;
     margin-bottom: 25px;
+    justify-content: center; /* 중앙 정렬 */
 }
 
 .statBadge {
-    padding: 8px 20px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: var(--fs-stat-badge);
     color: #fff;
+    padding: 8px 20px;
+    font-size: var(--fs-stat-badge);
     background: #444; /* 기본 배경 */
+    font-weight: bold;
+    border-radius: 20px;
 }
 
 /* 티어별 컬러 강조 */
-.tier1Badge { background: #ff9800; }
-.tier2Badge { background: #2196f3; }
-.tier3Badge { background: #4caf50; }
-.tier4Badge { background: #757575; }
+.tier1Badge {
+    background: #ff9800;
+}
+.tier2Badge {
+    background: #2196f3;
+}
+.tier3Badge {
+    background: #4caf50;
+}
+.tier4Badge {
+    background: #757575;
+}
 
 /* 우측 상단 X 닫기 버튼 */
 .closeButton {
-    position: absolute;
     top: 10px;
-    right: 15px;
-    background: none;
-    border: none;
     color: #aaa;
-    font-size: var(--fs-close-btn);
+    right: 15px;
+    border: none;
     cursor: pointer;
+    position: absolute;
+    font-size: var(--fs-close-btn);
+    background: none;
 }
-.closeButton:hover { color: white; }
-
+.closeButton:hover {
+    color: white;
+}
 
 /* 커스텀 관리자 모달 */
-.modal { display: flex; justify-content: center; align-items: center; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); }
-.modalContent { background: #1e1e1e; padding: 25px; border: 1px solid #444; width: 90%; max-width: 450px; border-radius: 8px; }
-.modalContent h3 { margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; color: #4caf50; }
-.modalButtons { display: flex; gap: 10px; margin-top: 15px; }
-.modalButtons button { flex: 1; padding: 10px; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; color: white; }
+.modal {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    z-index: 1000;
+    position: fixed;
+    background: rgba(0, 0, 0, 0.8);
+    align-items: center;
+    justify-content: center;
+}
+.modalContent {
+    width: 90%;
+    border: 1px solid #444;
+    padding: 25px;
+    max-width: 450px;
+    background: #1e1e1e;
+    border-radius: 8px;
+}
+.modalContent h3 {
+    color: #4caf50;
+    margin-top: 0;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+.modalButtons {
+    gap: 10px;
+    display: flex;
+    margin-top: 15px;
+}
+.modalButtons button {
+    flex: 1;
+    color: white;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    font-weight: bold;
+    border-radius: 4px;
+}
 
-.editBadge { position: absolute; top: 0; right: 0; font-size: var(--fs-edit-badge); background: rgba(0,0,0,0.5); padding: 2px; }
+.editBadge {
+    top: 0;
+    right: 0;
+    padding: 2px;
+    position: absolute;
+    font-size: var(--fs-edit-badge);
+    background: rgba(0, 0, 0, 0.5);
+}
 
 /* ===== 경매 진행 창 (AuctionPanel) 요소 ===== */
-.blockTitle { margin: 0 0 10px 0; }
-.waitingText { color: #888; }
-.bidInfoWrap { margin: 10px 0; text-align: center; }
-.highestBidText { color: #ff9800; }
-.remainBudget { color: #4caf50; margin-left: 12px; }
-.controlDock { margin-top: auto; }
-.ctrlBtnRow { display: flex; gap: 8px; }
-.ctrlBtn { flex: 1; padding: 12px; border: none; color: #fff; font-weight: bold; border-radius: 4px; cursor: pointer; }
-.ctrlBtn:disabled { opacity: 0.5; cursor: not-allowed; }
-.ctrlBtnStart { background: #2196f3; }
-.ctrlBtnRestart { background: #9c27b0; }
-.ctrlBtnStop { background: #f44336; }
-.btnBid:disabled { opacity: 0.5; cursor: not-allowed; }
+.blockTitle {
+    margin: 0 0 10px 0;
+}
+.waitingText {
+    color: #888;
+}
+.bidInfoWrap {
+    margin: 10px 0;
+    text-align: center;
+}
+.highestBidText {
+    color: #ff9800;
+}
+.remainBudget {
+    color: #4caf50;
+    margin-left: 12px;
+}
+.controlDock {
+    margin-top: auto;
+}
+.ctrlBtnRow {
+    gap: 8px;
+    display: flex;
+}
+.ctrlBtn {
+    flex: 1;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    padding: 12px;
+    font-weight: bold;
+    border-radius: 4px;
+}
+.ctrlBtn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+.ctrlBtnStart {
+    background: #2196f3;
+}
+.ctrlBtnRestart {
+    background: #9c27b0;
+}
+.ctrlBtnStop {
+    background: #f44336;
+}
+.btnBid:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
 
 /* 팀장 입찰 / PIN 입장 UI */
-.leaderLoginBox { display: flex; flex-direction: column; gap: 8px; }
-.leaderHint { color: #aaa; font-size: var(--fs-team-pts); text-align: center; }
-.leaderBar { display: flex; justify-content: space-between; align-items: center; }
-.leaderBadge { color: #4caf50; font-weight: bold; }
-.leaderLogoutBtn { background: #555; color: #fff; border: none; border-radius: 3px; padding: 4px 10px; cursor: pointer; }
-.leaderBlocked { color: #ff4c4c; font-size: var(--fs-team-pts); text-align: center; }
+.leaderLoginBox {
+    gap: 8px;
+    display: flex;
+    flex-direction: column;
+}
+.leaderHint {
+    color: #aaa;
+    font-size: var(--fs-team-pts);
+    text-align: center;
+}
+.leaderBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.leaderBadge {
+    color: #4caf50;
+    font-weight: bold;
+}
+.leaderLogoutBtn {
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    padding: 4px 10px;
+    background: #555;
+    border-radius: 3px;
+}
+.leaderBlocked {
+    color: #ff4c4c;
+    font-size: var(--fs-team-pts);
+    text-align: center;
+}
 
-.timerBox { text-align: center; margin-bottom: 10px; }
-.timerNormal { color: #ff9800; }
-.timerUrgent { color: #ff4c4c; }
-.logHeaderRow { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
-.logHeaderTitle { margin: 0; color: #aaa; }
-.clearLogsBtn { background: #555; color: #fff; border: none; border-radius: 3px; padding: 3px 8px; cursor: pointer; }
-.logEmpty { color: #aaa; }
-.logRow { color: #ccc; margin-bottom: 5px; line-height: 1.4; }
-.logTimeText { color: #777; margin-right: 5px; }
+.timerBox {
+    text-align: center;
+    margin-bottom: 10px;
+}
+.timerNormal {
+    color: #ff9800;
+}
+.timerUrgent {
+    color: #ff4c4c;
+}
+.logHeaderRow {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    justify-content: space-between;
+}
+.logHeaderTitle {
+    color: #aaa;
+    margin: 0;
+}
+.clearLogsBtn {
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    padding: 3px 8px;
+    background: #555;
+    border-radius: 3px;
+}
+.logEmpty {
+    color: #aaa;
+}
+.logRow {
+    color: #ccc;
+    line-height: 1.4;
+    margin-bottom: 5px;
+}
+.logTimeText {
+    color: #777;
+    margin-right: 5px;
+}
 
 /* ===== 미배정 목록 헤더 (UnassignedGrid) ===== */
-.gridHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.gridTitle { margin: 0; }
-.legendTier1 { background: #ff9800; }
-.legendTier2 { background: #2196f3; }
-.legendTier3 { background: #4caf50; }
-.legendTier4 { background: #9e9e9e; }
+.gridHeader {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    justify-content: space-between;
+}
+.gridTitle {
+    margin: 0;
+}
+.legendTier1 {
+    background: #ff9800;
+}
+.legendTier2 {
+    background: #2196f3;
+}
+.legendTier3 {
+    background: #4caf50;
+}
+.legendTier4 {
+    background: #9e9e9e;
+}
 
 /* ===== 팀 확정 현황 헤더 (TeamEntryTable) ===== */
-.teamHeader { display: flex; justify-content: space-between; align-items: center; }
-.teamTitle { margin: 5px 0; }
-.resetBtn { background: #f44336; color: #fff; border: none; border-radius: 3px; padding: 4px 10px; cursor: pointer; font-weight: bold; }
+.teamHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.teamTitle {
+    margin: 5px 0;
+}
+.resetBtn {
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    padding: 4px 10px;
+    background: #f44336;
+    font-weight: bold;
+    border-radius: 3px;
+}
 
 /* ===== 참가자 등록/수정 모달 ===== */
-.editLabel { margin-bottom: 2px; }
-.saveBtn { background: #4caf50; }
-.deleteBtn { background: #f44336; }
-.cancelBtn { background: #555; }
+.editLabel {
+    margin-bottom: 2px;
+}
+.saveBtn {
+    background: #4caf50;
+}
+.deleteBtn {
+    background: #f44336;
+}
+.cancelBtn {
+    background: #555;
+}
 
 /* ===== 참가자 상세 팝업 ===== */
-.detailName { margin: 0 0 10px 0; color: #ff9800; }
-.badgeTeam { background: #2e5d34; border: 1px solid #4caf50; }
-.badgeLeader { background: #4a148c; border: 1px solid #9c27b0; }
-.badgeWin { background: #5d4b1f; border: 1px solid #ff9800; }
-.badgeReal { background: #333; border: 1px solid #555; }
-.detailNoteBox { margin-top: 10px; text-align: center; }
-.noteLeader { color: #ba68c8; }
-.noteWin { color: #4caf50; }
-.noteBlocked { color: #ff4c4c; }
-.detailBtn { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; }
-.detailBtnRevert { background: #f44336; }
-.detailBtnAssign { background: #ff9800; }
-
+.detailName {
+    color: #ff9800;
+    margin: 0 0 10px 0;
+}
+.badgeTeam {
+    border: 1px solid #4caf50;
+    background: #2e5d34;
+}
+.badgeLeader {
+    border: 1px solid #9c27b0;
+    background: #4a148c;
+}
+.badgeWin {
+    border: 1px solid #ff9800;
+    background: #5d4b1f;
+}
+.badgeReal {
+    border: 1px solid #555;
+    background: #333;
+}
+.detailNoteBox {
+    margin-top: 10px;
+    text-align: center;
+}
+.noteLeader {
+    color: #ba68c8;
+}
+.noteWin {
+    color: #4caf50;
+}
+.noteBlocked {
+    color: #ff4c4c;
+}
+.detailBtn {
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    padding: 12px;
+    margin-top: 10px;
+    border-radius: 6px;
+}
+.detailBtnRevert {
+    background: #f44336;
+}
+.detailBtnAssign {
+    background: #ff9800;
+}
 
 .adminControlPanel {
-    background: #252525;
-    padding: 15px;
-    border-radius: 6px;
     border: 1px solid #2196f3;
+    padding: 15px;
+    background: #252525;
     margin-top: 15px;
+    border-radius: 6px;
 }
 
 .bidPanel {
-    display: flex;
-    flex-direction: column;
     gap: 8px;
+    display: flex;
     margin-top: 15px;
+    flex-direction: column;
 }

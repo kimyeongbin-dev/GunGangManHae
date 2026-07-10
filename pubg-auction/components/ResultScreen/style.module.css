@@ -1,25 +1,40 @@
 /* components/ResultScreen/style.module.css */
-.wrap { padding: 20px; color: #eee; }
-.title { margin: 0 0 20px; color: #ff9800; text-align: center; }
+.wrap {
+    color: #eee;
+    padding: 20px;
+}
+.title {
+    color: #ff9800;
+    margin: 0 0 20px;
+    text-align: center;
+}
 
 .table {
-    border-collapse: collapse;
     margin: 0 auto;
-    background: #1e1e1e;
     font-size: 0.95rem;
+    background: #1e1e1e;
+    border-collapse: collapse;
 }
 .th {
-    background: #2d2d2d;
     color: #eee;
-    padding: 10px 18px;
     border: 1px solid #333;
+    padding: 10px 18px;
+    background: #2d2d2d;
     white-space: nowrap;
 }
 .td {
-    padding: 9px 18px;
     border: 1px solid #333;
+    padding: 9px 18px;
     text-align: center;
     white-space: nowrap;
 }
-.teamName { background: #252525; font-weight: bold; color: #ff9800; text-align: left; }
-.empty { color: #555; font-style: italic; }
+.teamName {
+    color: #ff9800;
+    background: #252525;
+    text-align: left;
+    font-weight: bold;
+}
+.empty {
+    color: #555;
+    font-style: italic;
+}
