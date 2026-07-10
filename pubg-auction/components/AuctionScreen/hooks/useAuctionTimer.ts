@@ -114,21 +114,7 @@ export function useAuctionTimer({ isAdmin, onExpire }: Options) {
         });
     };
 
-    // 10초 룰: 진행 중이고 남은 시간이 10초 이하일 때 입찰 발생 시 종료 시간 연장.
-    // (endAt이 없거나 이미 만료면 연장하지 않음 → 미시작/종료 상태에서 유령 타이머 방지)
-    const extendOnBid = async () => {
-        if (endAt === null) return;
-        const remaining = (endAt - serverNow()) / 1000;
-        if (remaining > 0 && remaining <= 10) {
-            const newEndTime = new Date(serverNow() + 10 * 1000);
+    // (10초 룰 연장은 서버 place_bid RPC가 처리 → 클라이언트에서 auction_meta를 직접 쓰지 않음)
 
-            await supabase.from('auction_meta')
-                .update({ timer_end_at: newEndTime.toISOString() })
-                .eq('id', 1);
-
-            await supabase.from('auction_logs').insert({ message: `입찰 발생! 종료 시간 10초 연장!` });
-        }
-    };
-
-    return { timeLeft, currentPToken, setTargetToken, startAuction, extendOnBid };
+    return { timeLeft, currentPToken, setTargetToken, startAuction };
 }

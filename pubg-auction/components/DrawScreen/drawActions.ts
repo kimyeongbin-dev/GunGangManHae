@@ -6,6 +6,19 @@ import { toast } from '@/lib/toast';
 import { TEAM_COUNT } from '../AuctionScreen/types';
 import type { Participant } from '../AuctionScreen/types';
 
+// 팀장 PIN 생성: 혼동 문자(O,0,I,1,L) 제외한 6자리
+const PIN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function genPin(): string {
+    let s = '';
+    for (let i = 0; i < 6; i++) s += PIN_ALPHABET[Math.floor(Math.random() * PIN_ALPHABET.length)];
+    return s;
+}
+function genUniquePins(n: number): string[] {
+    const set = new Set<string>();
+    while (set.size < n) set.add(genPin());
+    return [...set];
+}
+
 export async function drawLeaders() {
     const { data, error } = await supabase.from('participants').select('*');
     if (error) { toast.error('참가자 조회 실패: ' + error.message); return; }
@@ -15,9 +28,10 @@ export async function drawLeaders() {
         return;
     }
 
-    // 1) 기존 팀 구성/입찰/타이머 전체 초기화 (재추첨 = 팀 재설정)
+    // 1) 기존 팀 구성/입찰/타이머/팀장PIN 전체 초기화 (재추첨 = 팀 재설정)
     await supabase.from('participants').update({ team_name: null, is_leader: false }).not('p_token', 'is', null);
     await supabase.from('auction_bids').delete().neq('id', 0);
+    await supabase.from('leader_pins').delete().neq('team_name', '');
     await supabase.from('auction_meta').update({ timer_end_at: null, status: 'idle', current_p_token: null }).eq('id', 1);
 
     // 2) 무작위 16명 선정 (Fisher-Yates)
@@ -36,6 +50,12 @@ export async function drawLeaders() {
     );
     if (results.find((r) => r.error)) { toast.error('팀장 추첨 중 오류가 발생했습니다.'); return; }
 
+    // 4) 팀장별 PIN 발급 (진행자가 각 팀장에게 배포 → 팀장만 입찰 가능)
+    const pins = genUniquePins(TEAM_COUNT);
+    const pinRows = leaders.map((p, i) => ({ team_name: `${i + 1}팀`, p_token: p.p_token, pin: pins[i] }));
+    const { error: pinErr } = await supabase.from('leader_pins').insert(pinRows);
+    if (pinErr) { toast.error('팀장 PIN 생성 실패: ' + pinErr.message); return; }
+
     // 완료 안내는 로그 기반 announce가 모두에게 표시
     await supabase.from('auction_logs').insert({ message: `팀장 추첨 완료 (${TEAM_COUNT}팀)` });
 }
@@ -44,6 +64,7 @@ export async function drawLeaders() {
 export async function releaseLeaders() {
     await supabase.from('participants').update({ team_name: null, is_leader: false }).not('p_token', 'is', null);
     await supabase.from('auction_bids').delete().neq('id', 0);
+    await supabase.from('leader_pins').delete().neq('team_name', '');
     await supabase.from('auction_meta').update({ timer_end_at: null, status: 'idle', current_p_token: null }).eq('id', 1);
     // 안내는 로그 기반 announce가 모두에게 표시
     await supabase.from('auction_logs').insert({ message: '팀장 해제 (전원 익명 참가자로 복귀)' });

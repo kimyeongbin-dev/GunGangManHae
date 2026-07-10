@@ -14,6 +14,8 @@
 .cardName { margin-bottom: 6px; }
 .leaderTag { color: #ff9800; }
 .unassigned { color: #555; }
+.pinBox { margin-top: 8px; font-size: 0.8rem; color: #aaa; letter-spacing: 0.05em; }
+.pinBox b { color: #4caf50; font-size: 1rem; letter-spacing: 0.15em; }
 
 /* 티어 칩 (색상은 티어별 모디파이어) */
 .chip { color: #fff; padding: 2px 8px; border-radius: 10px; }

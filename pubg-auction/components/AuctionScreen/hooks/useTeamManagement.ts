@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast, confirmDialog } from '@/lib/toast';
 import { firstFreeSlotInTier } from '../utils';
-import { TEAM_COUNT, TEAM_BUDGET } from '../types';
+import { TEAM_COUNT } from '../types';
 import type { Participant, AuctionBid, ModalForm } from '../types';
 
 type Options = {
@@ -13,10 +13,9 @@ type Options = {
     auctionTarget: Participant | null;
     auctionRunning: boolean;
     isAdmin: boolean;
-    extendOnBid: () => Promise<void>; // 타이머 로직에서 주입
 };
 
-export function useTeamManagement({ participants, auctionBids, auctionTarget, auctionRunning, isAdmin, extendOnBid }: Options) {
+export function useTeamManagement({ participants, auctionBids, auctionTarget, auctionRunning, isAdmin }: Options) {
     // 공유 경매 대상 해제 (auction_meta.current_p_token = null → 모든 클라이언트 반영)
     const clearTarget = () =>
         supabase.from('auction_meta').update({ current_p_token: null }).eq('id', 1);
@@ -111,41 +110,24 @@ export function useTeamManagement({ participants, auctionBids, auctionTarget, au
         return true;
     };
 
-    // [공통] 입찰하기
-    const placeBid = async (teamName: string, amount: number): Promise<boolean> => {
+    // [팀장] 입찰하기 — 서버 place_bid RPC가 PIN·티어·최고가·예산·10초룰을 최종 검증한다.
+    // (클라이언트 검증은 즉각 피드백용일 뿐, 보안 경계는 서버.)
+    const placeBid = async (amount: number, pin: string | null): Promise<boolean> => {
         if (!auctionTarget) return false;
+        if (!pin) { toast.error('팀장 PIN으로 입장한 뒤 입찰할 수 있습니다.'); return false; }
         if (!auctionRunning) { toast.error('경매가 진행 중일 때만 입찰할 수 있습니다.'); return false; }
-        if (!teamName) { toast.error('팀을 선택하세요.'); return false; }
-        // 이미 해당 티어를 낙찰(확정)한 팀은 같은 티어 경매에 참여 불가 (팀당 티어별 1명)
-        const tierFilled = participants.some(
-            (p) => p.team_name === teamName && p.tier === auctionTarget.tier,
-        );
-        if (tierFilled) {
-            toast.error(`${teamName}은(는) 이미 ${auctionTarget.tier}티어 팀원이 있어 참여할 수 없습니다.`);
-            return false;
-        }
-        if (isNaN(amount)) { toast.error('포인트를 숫자로 입력하세요.'); return false; }
+        if (isNaN(amount) || amount <= 0) { toast.error('입찰 포인트를 숫자로 입력하세요.'); return false; }
         if (amount <= currentHighestBid) {
             toast.error(`현재 최고가(${currentHighestBid}P)보다 높은 금액을 입력해야 합니다.`);
             return false;
         }
-        // 남은 예산(보유 - 이미 낙찰로 소비한 합) 이내에서만 입찰 가능
-        const remaining = TEAM_BUDGET - (teamPoints[teamName] ?? 0);
-        if (amount > remaining) {
-            toast.error(`${teamName}의 남은 예산(${remaining}P)을 초과했습니다.`);
-            return false;
-        }
 
-        // 10초 룰 적용 (타이머 로직에 위임)
-        await extendOnBid();
-
-        // 입찰 정보 DB 기록
-        await supabase.from('auction_bids').insert({
-            p_token: auctionTarget.p_token,
-            team_name: teamName,
-            bid_amount: amount,
+        const { error } = await supabase.rpc('place_bid', {
+            p_target_token: auctionTarget.p_token,
+            p_amount: amount,
+            p_pin: pin,
         });
-        await supabase.from('auction_logs').insert({ message: `[${teamName}] ${amount}P 입찰!` });
+        if (error) { toast.error(error.message || '입찰에 실패했습니다.'); return false; }
         return true;
     };
 

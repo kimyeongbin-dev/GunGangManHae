@@ -268,6 +268,15 @@
 .ctrlBtnRestart { background: #9c27b0; }
 .ctrlBtnStop { background: #f44336; }
 .btnBid:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 팀장 입찰 / PIN 입장 UI */
+.leaderLoginBox { display: flex; flex-direction: column; gap: 8px; }
+.leaderHint { color: #aaa; font-size: var(--fs-team-pts); text-align: center; }
+.leaderBar { display: flex; justify-content: space-between; align-items: center; }
+.leaderBadge { color: #4caf50; font-weight: bold; }
+.leaderLogoutBtn { background: #555; color: #fff; border: none; border-radius: 3px; padding: 4px 10px; cursor: pointer; }
+.leaderBlocked { color: #ff4c4c; font-size: var(--fs-team-pts); text-align: center; }
+
 .timerBox { text-align: center; margin-bottom: 10px; }
 .timerNormal { color: #ff9800; }
 .timerUrgent { color: #ff4c4c; }

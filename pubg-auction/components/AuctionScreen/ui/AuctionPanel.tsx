@@ -1,10 +1,14 @@
 // components/AuctionScreen/ui/AuctionPanel.tsx
 // [렌더링] 경매 진행 창 (대상자 정보 · 입찰/제어판 · 실시간 로그)
+//  - 진행자: 시작/중단 제어판
+//  - 팀장: PIN 입장 후 자기 팀으로만 입찰
+//  - 참가자: 관전 전용 (입찰 UI 없음)
 import { useState } from 'react';
 import styles from '../style.module.css';
 import fonts from '../../typography.module.css';
-import { TEAM_COUNT, TEAM_BUDGET } from '../types';
+import { TEAM_BUDGET } from '../types';
 import { formatTime, participantLabel, teamLabel } from '../utils';
+import { toast } from '@/lib/toast';
 import type { Participant, Log } from '../types';
 
 type Props = {
@@ -18,9 +22,12 @@ type Props = {
     logs: Log[];
     onStartAuction: () => void;
     onStopAuction: () => void;
-    onBid: (teamName: string, amount: number) => Promise<boolean>;
+    onBid: (amount: number) => Promise<boolean>;
     onClearLogs: () => void;
     ineligibleTeams: string[]; // 현재 티어를 이미 확정해 참여 불가한 팀
+    leaderTeam: string | null; // 팀장으로 입장한 팀 (없으면 참가자/관전)
+    onLeaderLogin: (pin: string) => Promise<string | null>;
+    onLeaderLogout: () => void;
 };
 
 export default function AuctionPanel({
@@ -37,15 +44,30 @@ export default function AuctionPanel({
     onBid,
     onClearLogs,
     ineligibleTeams,
+    leaderTeam,
+    onLeaderLogin,
+    onLeaderLogout,
 }: Props) {
-    // 입찰 폼 상태 (참가자 전용, 이 컴포넌트 로컬)
-    const [selectedTeam, setSelectedTeam] = useState('');
     const [bidInput, setBidInput] = useState('');
-    const ineligible = new Set(ineligibleTeams);
+    const [pinInput, setPinInput] = useState('');
+
+    // 팀장이 입장했고, 그 팀이 현재 대상 티어를 이미 확정했으면 입찰 불가
+    const tierBlocked = leaderTeam ? new Set(ineligibleTeams).has(leaderTeam) : false;
+    const canBid = timeLeft > 0 && !tierBlocked;
 
     const handleBid = async () => {
-        const ok = await onBid(selectedTeam, parseInt(bidInput));
+        const ok = await onBid(parseInt(bidInput));
         if (ok) setBidInput('');
+    };
+
+    const handleLeaderLogin = async () => {
+        const team = await onLeaderLogin(pinInput);
+        if (team) {
+            toast.success(`${teamLabel(team, participants)} 팀장으로 입장했습니다.`);
+            setPinInput('');
+        } else {
+            toast.error('PIN이 올바르지 않습니다.');
+        }
     };
 
     return (
@@ -71,15 +93,15 @@ export default function AuctionPanel({
                 <div className={`${fonts.bidInfoRow} ${styles.bidInfoWrap}`}>
                     <div className={`${fonts.highestBid} ${styles.highestBidText}`}>
                         현재 최고가: {currentHighestBid}P
-                        {selectedTeam && (
+                        {leaderTeam && (
                             <span className={styles.remainBudget}>
-                                | {selectedTeam} 남은 예산: {TEAM_BUDGET - (teamPoints[selectedTeam] ?? 0)}P
+                                | {leaderTeam} 남은 예산: {TEAM_BUDGET - (teamPoints[leaderTeam] ?? 0)}P
                             </span>
                         )}
                     </div>
                 </div>
 
-                {/* 진행자 vs 참가자 UI 분기 처리 */}
+                {/* 역할별 컨트롤: 진행자 / 팀장 / 참가자 */}
                 <div className={`${styles.formGroup} ${styles.controlDock}`}>
                     {isAdmin ? (
                         /* [진행자 전용 제어판] */
@@ -91,26 +113,43 @@ export default function AuctionPanel({
                                 경매 중단
                             </button>
                         </div>
-                    ) : (
-                        /* [일반 참가자 입찰 폼] */
+                    ) : leaderTeam ? (
+                        /* [팀장 입찰 폼] 자기 팀 고정 */
                         <>
-                            <select className={styles.formSelect} value={selectedTeam} onChange={(e) => setSelectedTeam(e.target.value)}>
-                                <option value="">팀을 선택하세요</option>
-                                {Array.from({ length: TEAM_COUNT }).map((_, i) => {
-                                    const name = `${i + 1}팀`;
-                                    const blocked = ineligible.has(name);
-                                    return (
-                                        <option key={i} value={name} disabled={blocked}>
-                                            {teamLabel(name, participants)}{blocked ? ' (티어 완료)' : ''}
-                                        </option>
-                                    );
-                                })}
-                            </select>
-                            <input type="number" placeholder="입찰 포인트" className={styles.formInput} value={bidInput} onChange={(e) => setBidInput(e.target.value)} disabled={timeLeft <= 0} />
-                            <button onClick={handleBid} className={styles.btnBid} disabled={timeLeft <= 0}>
+                            <div className={styles.leaderBar}>
+                                <span className={styles.leaderBadge}>{teamLabel(leaderTeam, participants)} 팀장</span>
+                                <button onClick={onLeaderLogout} className={styles.leaderLogoutBtn}>팀장 해제</button>
+                            </div>
+                            {tierBlocked && (
+                                <div className={styles.leaderBlocked}>이미 이 티어 팀원이 있어 입찰할 수 없습니다.</div>
+                            )}
+                            <input
+                                type="number"
+                                placeholder="입찰 포인트"
+                                className={styles.formInput}
+                                value={bidInput}
+                                onChange={(e) => setBidInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter' && canBid) handleBid(); }}
+                                disabled={!canBid}
+                            />
+                            <button onClick={handleBid} className={styles.btnBid} disabled={!canBid}>
                                 {timeLeft > 0 ? '입찰하기' : '경매 대기 중'}
                             </button>
                         </>
+                    ) : (
+                        /* [참가자/관전] 팀장 PIN 입장 */
+                        <div className={styles.leaderLoginBox}>
+                            <div className={styles.leaderHint}>참가자는 관전만 가능합니다. 팀장은 PIN으로 입장하세요.</div>
+                            <input
+                                type="text"
+                                placeholder="팀장 PIN"
+                                className={styles.formInput}
+                                value={pinInput}
+                                onChange={(e) => setPinInput(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleLeaderLogin(); }}
+                            />
+                            <button onClick={handleLeaderLogin} className={styles.btnBid}>팀장 입장</button>
+                        </div>
                     )}
                 </div>
             </div>

@@ -6,6 +6,7 @@ import { toast, confirmDialog } from '@/lib/toast';
 import { useRealtimeAuction } from './hooks/useRealtimeAuction';
 import { useAuctionTimer } from './hooks/useAuctionTimer';
 import { useTeamManagement } from './hooks/useTeamManagement';
+import { useLeaderAuth } from './hooks/useLeaderAuth';
 import { getTierBySlot } from './utils';
 import UnassignedGrid from './ui/UnassignedGrid';
 import AuctionPanel from './ui/AuctionPanel';
@@ -46,6 +47,9 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
             .map((p) => p.team_name as string)
         : [];
 
+    // --- 팀장 인증 (PIN) ---
+    const { leaderTeam, leaderPin, loginLeader, logoutLeader } = useLeaderAuth();
+
     // --- 팀 관리 로직 ---
     const team = useTeamManagement({
         participants,
@@ -53,7 +57,6 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
         auctionTarget,
         auctionRunning,
         isAdmin,
-        extendOnBid: timer.extendOnBid,
     });
     // 최신 자동 낙찰 함수를 ref에 보관 (타이머 만료 콜백이 참조)
     useEffect(() => {
@@ -134,9 +137,12 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
                     logs={logs}
                     onStartAuction={handleStartAuction}
                     onStopAuction={team.stopAuction}
-                    onBid={team.placeBid}
+                    onBid={(amount) => team.placeBid(amount, leaderPin)}
                     onClearLogs={clearLogs}
                     ineligibleTeams={ineligibleTeams}
+                    leaderTeam={leaderTeam}
+                    onLeaderLogin={loginLeader}
+                    onLeaderLogout={logoutLeader}
                 />
                 <TeamEntryTable
                     participants={participants}

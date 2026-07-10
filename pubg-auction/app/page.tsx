@@ -9,12 +9,15 @@ import DrawScreen from '../components/DrawScreen';
 import ResultScreen from '../components/ResultScreen';
 import { regenerateAnonymous } from '../components/AuctionScreen/anonActions';
 
+// 진행자 계정 이메일 (비밀 아님). Supabase Auth의 계정 이메일 및 SQL is_admin()과 반드시 일치.
+const ADMIN_EMAIL = 'admin@gungang.local';
+
 export default function MainApp() {
   // 상태 관리
   // null = page_state 아직 로드 전 (초기 경매창 반짝임 방지)
   const [currentView, setCurrentView] = useState<'draw' | 'auction' | 'result' | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminCode, setAdminCode] = useState('');
+  const [adminCode, setAdminCode] = useState(''); // 진행자 비밀번호 입력값
   const [revealNames, setRevealNames] = useState(false); // 진행자 실명(비제이명) 공개 토글
     
   // 핵심: 참가자들의 브라우저가 DB를 실시간으로 구독하는 로직
@@ -39,6 +42,14 @@ export default function MainApp() {
     return () => { supabase.removeChannel(channel) };
   }, []);
 
+  // 진행자 세션 감시: Supabase Auth 세션이 진행자 계정이면 isAdmin. 새로고침해도 유지.
+  useEffect(() => {
+    const apply = (email: string | undefined) => setIsAdmin(email === ADMIN_EMAIL);
+    supabase.auth.getSession().then(({ data }) => apply(data.session?.user.email ?? undefined));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => apply(session?.user.email ?? undefined));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
   // 진행자 버튼 로직 (DB 업데이트를 통해 모든 참가자 화면 동기화)
   const changePageAsAdmin = async (pageName: 'draw' | 'auction' | 'result') => {
     setCurrentView(pageName); // 내 화면 즉시 변경
@@ -46,21 +57,23 @@ export default function MainApp() {
     await supabase.from('page_state').update({ current_page: pageName }).eq('id', 1); 
   };
   
-  // 진행자 인증 로직
-  const handleAdminLogin = () => {
-    if (adminCode === '0000') {
-      setIsAdmin(true);
-      toast.success('진행자 모드로 전환되었습니다.');
-    } else {
-      toast.error('코드가 일치하지 않습니다.');
+  // 진행자 인증 로직 (Supabase Auth: 서버에서 비밀번호 검증 → JWT 발급)
+  const handleAdminLogin = async () => {
+    const { error } = await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password: adminCode });
+    if (error) {
+      toast.error('비밀번호가 일치하지 않습니다.');
+      return;
     }
+    setAdminCode('');
+    toast.success('진행자 모드로 전환되었습니다.');
+    // isAdmin은 onAuthStateChange가 반영
   };
 
   // 진행자 모드 해제 로직
   const handleAdminLogout = async () => {
     if (await confirmDialog('진행자 모드를 해제하시겠습니까?')) {
-      setIsAdmin(false);
-      setAdminCode(''); // 입력된 코드 초기화
+      await supabase.auth.signOut();
+      setAdminCode('');
       toast.info('일반 참가자 모드로 전환되었습니다.');
     }
   };
@@ -74,11 +87,12 @@ export default function MainApp() {
         <div className={styles.adminSection}>
           {!isAdmin ? (
             <div className={styles.loginBox}>
-              <input 
-                type="password" 
-                placeholder="진행자 코드" 
-                value={adminCode} 
-                onChange={(e) => setAdminCode(e.target.value)} 
+              <input
+                type="password"
+                placeholder="진행자 비밀번호"
+                value={adminCode}
+                onChange={(e) => setAdminCode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAdminLogin(); }}
                 className={styles.input}
               />
               <button onClick={handleAdminLogin} className={styles.btn}>진행자 인증</button>
