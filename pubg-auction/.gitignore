@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 로컬 전용 기획/설계 문서 (커밋 대상 아님)
+/docs/
