@@ -36,3 +36,4 @@ export type ModalForm = {
 export const TEAM_COUNT = 16;
 export const SLOT_COUNT = 64; // 16 x 4
 export const TEAM_BUDGET = 10000; // 팀별 보유 포인트 (전 팀 동일, 추후 조정)
+export const AUCTION_DURATION_SEC = 120; // 경매 1회차 시작 시간(초). 입찰 시 10초룰로 연장됨.

@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { serverNow, syncServerTime } from '@/lib/serverTime';
+import { AUCTION_DURATION_SEC } from '../types';
 import type { Participant } from '../types';
 
 type Options = {
@@ -99,7 +100,7 @@ export function useAuctionTimer({ isAdmin, onExpire }: Options) {
     // [진행자] 경매 시작 (60초). 이 업데이트가 모든 참가자의 타이머를 시작시킴
     // 종료 시각도 서버 정렬 시각(serverNow) 기준으로 만들어 진행자 시계 오차가 새지 않게 한다.
     const startAuction = async (target: Participant, restart = false) => {
-        const duration = 60; // 초 단위
+        const duration = AUCTION_DURATION_SEC; // 초 단위 (types.ts에서 조정)
         const endTime = new Date(serverNow() + duration * 1000);
 
         await supabase.from('auction_meta').upsert({

@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import styles from '../style.module.css';
 import fonts from '../../typography.module.css';
-import { TEAM_BUDGET } from '../types';
+import { TEAM_BUDGET, AUCTION_DURATION_SEC } from '../types';
 import { formatTime, participantLabel, teamLabel } from '../utils';
 import { toast } from '@/lib/toast';
 import type { Participant, Log } from '../types';
@@ -107,7 +107,7 @@ export default function AuctionPanel({
                         /* [진행자 전용 제어판] */
                         <div className={`${styles.adminControlPanel} ${styles.ctrlBtnRow}`}>
                             <button onClick={onStartAuction} className={`${styles.ctrlBtn} ${timeLeft > 0 ? styles.ctrlBtnRestart : styles.ctrlBtnStart}`}>
-                                {timeLeft > 0 ? '재시작' : '경매 시작 (1분)'}
+                                {timeLeft > 0 ? '재시작' : `경매 시작 (${AUCTION_DURATION_SEC}초)`}
                             </button>
                             <button onClick={onStopAuction} disabled={timeLeft <= 0} className={`${styles.ctrlBtn} ${styles.ctrlBtnStop}`}>
                                 경매 중단
