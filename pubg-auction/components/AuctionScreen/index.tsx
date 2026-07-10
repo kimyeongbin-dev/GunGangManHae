@@ -1,5 +1,17 @@
 // components/AuctionScreen/index.tsx
-// [메인 구조] 로직 훅을 조립하고 하위 렌더링 컴포넌트를 배치
+// ---------------------------------------------------------------------------
+// [2단계 · 경매 화면의 메인 구조] 로직 훅들을 조립하고 하위 렌더링 컴포넌트에 값/콜백을 배치한다.
+//
+// 데이터 흐름:
+//   useRealtimeAuction → participants·auctionBids·logs (실시간 구독)
+//   useAuctionTimer    → timeLeft·currentPToken (서버 공유 타이머)   ─┐
+//   useTeamManagement  → 파생값(최고가/예산) + 액션(입찰/낙찰/초기화)  ├→ UI 컴포넌트로 내려감
+//   useLeaderAuth      → 팀장 PIN 세션 (입찰 권한)                    │
+//   useAdminNames      → 진행자 전용 실명 맵 (showReal일 때만 표시)  ─┘
+//
+// 배치 컴포넌트: UnassignedGrid(좌) / AuctionPanel·TeamEntryTable(우) / 상세·편집 모달.
+// 렌더 위치: page.tsx의 currentView==='auction'.
+// ---------------------------------------------------------------------------
 import { useState, useRef, useCallback, useEffect } from 'react';
 import styles from './style.module.css';
 import { toast, confirmDialog } from '@/lib/toast';
@@ -29,10 +41,12 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
     const [editForm, setEditForm] = useState<ModalForm>(EMPTY_FORM);
     const showReal = isAdmin && revealNames; // 실명(비제이명) 표시 여부 (revealNames는 page.tsx에서 주입)
 
-    // 진행자 전용 실명 맵(secrets). showReal일 때만 화면에 실명으로 노출.
+    // 진행자 전용 실명 맵(secrets). adminNames는 항상 로드하되(편집 모달용),
+    // 화면 표시에는 showReal일 때만 displayNames로 하위에 내려 실명 노출을 게이팅한다.
     const adminNames = useAdminNames(isAdmin, participants.length);
     const displayNames = showReal ? adminNames : undefined;
 
+    // 상세 팝업 대상: 토큰으로 저장하고 실시간 목록에서 파생 → 초기화/재추첨/공석 변경이 즉시 반영.
     const viewingTarget = participants.find((p) => p.p_token === viewingToken) ?? null;
 
     // --- 타이머 로직 ---

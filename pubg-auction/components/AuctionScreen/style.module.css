@@ -1,5 +1,11 @@
-/* components/AuctionScreen/style.module.css */
-.container { 
+/* ================================================================
+   components/AuctionScreen/style.module.css
+   경매 화면(2단계)의 레이아웃/컴포넌트 스타일 모음.
+   폰트 "크기"는 typography.module.css에서 관리하고, 여기선 배치·색·간격 등을 담당한다.
+   구성: 전체 컨테이너 · 미배정 그리드(좌) · 경매 패널/제어판(우) · 팀 확정 표 · 각종 모달.
+   동적 상태는 인라인이 아니라 modifier 클래스로 처리(예: .timerUrgent, .ctrlBtnStop).
+   ================================================================ */
+.container {
     display: flex; 
     gap: 15px; 
     flex-direction: column;

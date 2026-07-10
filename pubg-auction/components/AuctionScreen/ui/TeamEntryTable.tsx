@@ -1,5 +1,7 @@
 // components/AuctionScreen/ui/TeamEntryTable.tsx
-// [렌더링] 팀 확정 엔트리 현황 (16팀 x 4티어 표)
+// [렌더링] 팀 확정 엔트리 현황 (16팀 × 4티어 표). 렌더: AuctionScreen(index.tsx) 우측 하단.
+// 팀원 셀 클릭 → onViewMember(상세 팝업), 진행자는 '경매 전체 초기화'(onResetAuction) 가능.
+// 팀 포인트/낙찰가는 teamPoints·memberPrices(useTeamManagement 파생값)에서 온다.
 import styles from '../style.module.css';
 import fonts from '../../typography.module.css';
 import { TEAM_COUNT, TEAM_BUDGET } from '../types';

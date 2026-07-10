@@ -1,5 +1,7 @@
 // components/AuctionScreen/ui/ParticipantDetailModal.tsx
-// [렌더링] 참가자 상세 정보 팝업 (블라인드: 익명명/티어/딜량/소개글)
+// [렌더링] 참가자 상세 정보 팝업. 렌더: AuctionScreen(index.tsx)에서 viewingToken이 있을 때.
+// 진행자에게는 상황별 액션 노출: 대상 지정(onAssignTarget) / 낙찰 취소(onRevertWin) / 안내.
+// realName이 있으면(진행자 실명모드) 비제이명까지 표시.
 import styles from '../style.module.css';
 import fonts from '../../typography.module.css';
 import { participantLabel } from '../utils';

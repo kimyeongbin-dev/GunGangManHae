@@ -1,5 +1,7 @@
 // components/AuctionScreen/ui/UnassignedGrid.tsx
-// [렌더링] 미배정 참가자 목록 (16x4 대기석 그리드)
+// [렌더링] 미배정 참가자 목록 (16열 × 4티어 대기석 그리드). 렌더: AuctionScreen(index.tsx) 좌측.
+// 셀 클릭 → onCellClick(상세 보기 or 진행자 신규 등록), '수정' 뱃지 → onEditParticipant.
+// realNames가 있으면(진행자 실명모드) 실명, 없으면 익명 표시(participantLabel).
 import styles from '../style.module.css';
 import fonts from '../../typography.module.css';
 import { getTierBySlot, participantLabel } from '../utils';

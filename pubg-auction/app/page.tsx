@@ -1,45 +1,52 @@
-'use client'; 
-
+'use client';
+// app/page.tsx
+// ---------------------------------------------------------------------------
+// [SPA 루트] 3개 화면(추첨/경매/결과)을 전환하는 최상위 컴포넌트.
+//  · 화면 전환은 page_state 테이블로 "공유"된다 → 진행자가 바꾸면 모든 접속자가 실시간 동기화.
+//  · 진행자 인증은 Supabase Auth(이메일+비번). 로그인하면 isAdmin=true.
+//  · 헤더에서 진행자는 화면 전환·익명/실명 토글·익명 재생성을 제어한다.
+// 'use client'는 진입점인 여기만 있으면 되고, 하위 컴포넌트는 상속받는다.
+// ---------------------------------------------------------------------------
 import { useState, useEffect } from 'react';
 import styles from './page.module.css';
-import { supabase } from '../lib/supabaseClient'; // (경로 확인 필요 시 수정)
-import { toast, confirmDialog } from '../lib/toast';
-import AuctionScreen from '../components/AuctionScreen';
-import DrawScreen from '../components/DrawScreen';
-import ResultScreen from '../components/ResultScreen';
-import { regenerateAnonymous } from '../components/AuctionScreen/anonActions';
+import { supabase } from '@/lib/supabaseClient';
+import { toast, confirmDialog } from '@/lib/toast';
+import AuctionScreen from '@/components/AuctionScreen';
+import DrawScreen from '@/components/DrawScreen';
+import ResultScreen from '@/components/ResultScreen';
+import { regenerateAnonymous } from '@/components/AuctionScreen/anonActions';
 
-// 진행자 계정 이메일 (비밀 아님). Supabase Auth의 계정 이메일 및 SQL is_admin()과 반드시 일치.
+// 공유 화면 종류. page_state.current_page 와 동일한 값.
+type PageView = 'draw' | 'auction' | 'result';
+
+// 진행자 계정 이메일 (비밀 아님, 아이디 역할). Supabase Auth 계정 및 SQL is_admin()과 반드시 일치.
 const ADMIN_EMAIL = 'admin@gungang.local';
 
 export default function MainApp() {
-  // 상태 관리
-  // null = page_state 아직 로드 전 (초기 경매창 반짝임 방지)
-  const [currentView, setCurrentView] = useState<'draw' | 'auction' | 'result' | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminCode, setAdminCode] = useState(''); // 진행자 비밀번호 입력값
-  const [revealNames, setRevealNames] = useState(false); // 진행자 실명(비제이명) 공개 토글
-    
-  // 핵심: 참가자들의 브라우저가 DB를 실시간으로 구독하는 로직
+  // currentView: 현재 보이는 화면. null = page_state 로드 전(초기 화면 반짝임 방지용 로딩 상태).
+  const [currentView, setCurrentView] = useState<PageView | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);            // 진행자 세션 여부
+  const [adminCode, setAdminCode] = useState('');           // 진행자 비밀번호 입력값
+  const [revealNames, setRevealNames] = useState(false);    // 진행자 실명(비제이명) 공개 토글
+
+  // 공유 화면(page_state) 구독: 새 접속자는 현재 화면을 그대로 보고, 이후 변경도 실시간 반영.
   useEffect(() => {
-    // 초기 로드: 현재 공유 페이지(page_state)를 반영 → 새 접속자도 같은 화면을 봄
     (async () => {
       const { data } = await supabase.from('page_state').select('current_page').eq('id', 1).maybeSingle();
-      setCurrentView((data?.current_page as 'draw' | 'auction' | 'result') ?? 'auction');
+      setCurrentView((data?.current_page as PageView) ?? 'auction');
     })();
 
     const channel = supabase
       .channel('page_state_changes')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_state' },
         (payload) => {
-          // DB 변경 감지 시 즉각 화면 전환
-          const next = (payload.new as { current_page: 'draw' | 'auction' | 'result' }).current_page;
-          if (next) setCurrentView(next);
+          const next = (payload.new as { current_page: PageView }).current_page;
+          if (next) setCurrentView(next); // DB 변경 감지 시 즉각 화면 전환
         }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel) };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   // 진행자 세션 감시: Supabase Auth 세션이 진행자 계정이면 isAdmin. 새로고침해도 유지.
@@ -50,9 +57,9 @@ export default function MainApp() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // 진행자 버튼 로직 (DB 업데이트를 통해 모든 참가자 화면 동기화)
-  // DB를 먼저 갱신한 뒤 화면 전환 → 결과 화면의 result_names()가 page_state='result'를 보게 함
-  const changePageAsAdmin = async (pageName: 'draw' | 'auction' | 'result') => {
+  // 진행자 화면 전환: page_state를 갱신하면 모든 접속자가 동기화된다.
+  // DB를 먼저 갱신한 뒤 로컬 전환 → 결과 화면의 result_names()가 page_state='result'를 확실히 보게 함.
+  const changePageAsAdmin = async (pageName: PageView) => {
     await supabase.from('page_state').update({ current_page: pageName }).eq('id', 1);
     setCurrentView(pageName);
   };
@@ -83,7 +90,7 @@ export default function MainApp() {
       {/* --- 상단 헤더 & 진행자 컨트롤 --- */}
       <header className={styles.header}>
         <h1 className={styles.title}>건강만해 블라인드 팀 뽑기</h1>
-        
+
         <div className={styles.adminSection}>
           {!isAdmin ? (
             <div className={styles.loginBox}>
@@ -114,21 +121,21 @@ export default function MainApp() {
                 익명 만들기
               </button>
 
-              {/* 화면 전환 버튼들 */}
-              <button 
-                onClick={() => changePageAsAdmin('draw')} 
+              {/* 화면 전환 버튼들 (진행자가 누르면 전원 동기화) */}
+              <button
+                onClick={() => changePageAsAdmin('draw')}
                 className={`${styles.navBtn} ${currentView === 'draw' ? styles.active : ''}`}
               >
                 1. 추첨
               </button>
-              <button 
-                onClick={() => changePageAsAdmin('auction')} 
+              <button
+                onClick={() => changePageAsAdmin('auction')}
                 className={`${styles.navBtn} ${currentView === 'auction' ? styles.active : ''}`}
               >
                 2. 경매
               </button>
-              <button 
-                onClick={() => changePageAsAdmin('result')} 
+              <button
+                onClick={() => changePageAsAdmin('result')}
                 className={`${styles.navBtn} ${currentView === 'result' ? styles.active : ''}`}
               >
                 3. 결과
