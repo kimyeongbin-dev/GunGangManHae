@@ -1,33 +1,35 @@
 // components/AuctionScreen/anonActions.ts
-// 익명 자동 생성: 전 참가자에 익명 재배정 + 동일 티어 내 슬롯 위치를 무작위로 셔플.
-// page.tsx 헤더 버튼에서 호출하므로 훅과 분리된 독립 함수로 둔다.
+// 익명(fake_name) 재배정 + 동일 티어 내 그리드 슬롯 셔플 로직.
+// 훅이 아닌 독립 함수 → 헤더 버튼(page.tsx)과 추첨/해제(drawActions.ts) 양쪽에서 재사용.
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from '@/lib/toast';
 import { generateAnonNames } from './anonNames';
+import { shuffle } from './utils';
 import type { Participant } from './types';
 
-// 코어: 주어진 참가자 목록에 익명(fake_name)을 재배정하고 동일 티어 내 슬롯을 셔플한다.
-// 토스트 없음 → 추첨/해제 등 다른 흐름에서 재사용 (성공 여부만 반환).
+const TIER_ROW_SIZE = 16; // 그리드 한 티어(행)의 슬롯 수 (16열 × 4행 구조)
+
+// [코어] 주어진 참가자들에게 새 익명을 배정하고, 티어별로 슬롯 순서를 무작위로 섞는다.
+//  - 토스트를 띄우지 않으므로 다른 흐름(추첨/해제)에서 조용히 재사용할 수 있다.
+//  - 각 티어(1~4) 안에서만 셔플 → 티어 구분은 유지한 채 자리만 무작위화.
+//  - 반환: 모든 업데이트가 성공했는지 여부.
+// 호출: regenerateAnonymous(아래), drawLeaders/releaseLeaders(drawActions.ts).
 export async function reassignAnonymous(participants: Participant[]): Promise<boolean> {
     if (participants.length === 0) return true;
 
-    const names = generateAnonNames(participants.length);
+    const names = generateAnonNames(participants.length); // 무작위 익명 풀
     const updates: { p_token: string; fake_name: string; slot_index: number }[] = [];
     let nameIdx = 0;
 
     for (let tier = 1; tier <= 4; tier++) {
-        const tierParts = participants.filter((p) => parseInt(p.tier) === tier);
-        // Fisher-Yates: 동일 티어 내 배치 순서를 무작위로 섞음
-        for (let i = tierParts.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [tierParts[i], tierParts[j]] = [tierParts[j], tierParts[i]];
-        }
-        const start = (tier - 1) * 16;
+        const tierParts = shuffle(participants.filter((p) => parseInt(p.tier) === tier));
+        const start = (tier - 1) * TIER_ROW_SIZE; // 이 티어 행의 시작 슬롯 인덱스
         tierParts.forEach((p, idx) => {
             updates.push({ p_token: p.p_token, fake_name: names[nameIdx++], slot_index: start + idx });
         });
     }
 
+    // 참가자별로 fake_name·slot_index만 갱신 (실명·티어 등은 건드리지 않음)
     const results = await Promise.all(
         updates.map((u) =>
             supabase.from('participants').update({ fake_name: u.fake_name, slot_index: u.slot_index }).eq('p_token', u.p_token),
@@ -36,7 +38,8 @@ export async function reassignAnonymous(participants: Participant[]): Promise<bo
     return !results.find((r) => r.error);
 }
 
-// 헤더 '익명 만들기' 버튼용: 전 참가자 조회 → 재배정 + 안내 토스트.
+// [진행자] 헤더 '익명 만들기' 버튼 핸들러: 전 참가자를 조회해 재배정하고 결과를 토스트로 안내.
+// 호출: page.tsx 헤더의 onClick.
 export async function regenerateAnonymous() {
     const { data, error } = await supabase.from('participants').select('*');
     if (error) { toast.error('참가자 조회 실패: ' + error.message); return; }

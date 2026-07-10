@@ -1,27 +1,52 @@
 // components/AuctionScreen/utils.ts
-
-// 슬롯 인덱스 기준 티어 계산 (16x4 구조)
-export const getTierBySlot = (slotIndex: number): string => {
-    const row = Math.floor(slotIndex / 16);
-    if (row === 0) return "1";
-    if (row === 1) return "2";
-    if (row === 2) return "3";
-    if (row === 3) return "4";
-    return "1";
-};
-
+// ---------------------------------------------------------------------------
+// 순수 헬퍼 모음 (부수효과·DB 접근 없음).
+// 경매/추첨/결과 화면 전반에서 공유한다. DB를 건드리는 데이터 접근은 auctionData.ts에 있다.
+// ---------------------------------------------------------------------------
 import type { Participant } from './types';
 
-// 참가자 표시 이름.
-//  - realName 인자: 이 참가자를 실명으로 보여줄 수 있으면 실명 문자열, 아니면 undefined.
-//    (진행자 실명모드=secrets, 결과화면=result_names RPC 에서 해석해 넘긴다)
-//  - realName 이 없으면 reveal_name(팀장/공개) → 없으면 fake_name(블라인드) 순.
+// 미배정 그리드는 "16열 × 4행(행 = 티어)" 구조다. 한 티어(행)에 담기는 슬롯 수 = 16.
+// getTierBySlot / firstFreeSlotInTier 가 공유하는 상수.
+const GRID_COLS = 16;
+
+// ── 슬롯 ↔ 티어 매핑 ───────────────────────────────────────────────────────
+
+// 슬롯 인덱스(0~63)로 티어("1"~"4")를 계산한다.
+// 0~15 = 1티어, 16~31 = 2티어, 32~47 = 3티어, 48~63 = 4티어.
+// 사용처: UnassignedGrid(셀별 티어 색), AuctionScreen.handleCellClick(빈 칸 등록 시 티어 결정).
+export const getTierBySlot = (slotIndex: number): string => {
+    const tier = Math.floor(slotIndex / GRID_COLS) + 1; // 행 번호(0~3) → 티어(1~4)
+    return tier >= 1 && tier <= 4 ? String(tier) : '1';
+};
+
+// 특정 티어(행)에서 비어 있는 첫 슬롯 인덱스를 반환한다. 자리가 없으면 -1.
+// 티어 T의 슬롯 범위는 (T-1)*16 ~ (T-1)*16 + 15.
+// 사용처: useTeamManagement.saveParticipant(신규 등록/티어 변경 시 자리 배정).
+export const firstFreeSlotInTier = (tier: string, occupied: Set<number>): number => {
+    const start = (parseInt(tier) - 1) * GRID_COLS;
+    for (let i = start; i < start + GRID_COLS; i++) {
+        if (!occupied.has(i)) return i;
+    }
+    return -1;
+};
+
+// ── 표시 이름 (블라인드 규칙의 핵심) ────────────────────────────────────────
+
+// 참가자를 화면에 어떻게 표기할지 결정한다.
+//  - realName: "이 참가자를 실명으로 보여줘도 되는가"를 호출부가 이미 판단해 넘긴 값.
+//      · 진행자 실명 모드 → participant_secrets 맵에서, 결과 화면 → result_names() RPC 맵에서 넘어온다.
+//      · realName 이 없으면(=undefined) 실명을 볼 권한/상황이 아니라는 뜻.
+//  - 우선순위: realName(권한 있는 실명) → reveal_name(팀장/공개 대상) → fake_name(블라인드).
+//  - 팀장은 항상 "…(팀장)" 접미사.
+// 사용처: UnassignedGrid, AuctionPanel, TeamEntryTable, ParticipantDetailModal, ResultScreen.
 export const participantLabel = (p: Participant, realName?: string): string => {
     const shown = realName ?? p.reveal_name ?? p.fake_name ?? '?';
     return p.is_leader ? `${shown}(팀장)` : shown;
 };
 
-// 팀 표시 이름: "비제이명팀-N팀". 팀장이 없으면 원래 "N팀".
+// 팀 표시 이름: "비제이명팀-N팀" (팀장이 없으면 그냥 "N팀").
+// realNames: participantLabel 과 동일하게, 팀장을 실명으로 보여줄 수 있을 때만 전달된다.
+// 사용처: TeamEntryTable(팀명 열), AuctionPanel(팀장 입장 뱃지), ResultScreen(팀명 열).
 export const teamLabel = (teamName: string, participants: Participant[], realNames?: Record<string, string>): string => {
     const leader = participants.find((p) => p.is_leader && p.team_name === teamName);
     if (!leader) return teamName;
@@ -29,20 +54,34 @@ export const teamLabel = (teamName: string, participants: Participant[], realNam
     return `${name}팀-${teamName}`;
 };
 
-// 티어(1~4) 행에서 비어있는 첫 슬롯 인덱스. 자리가 없으면 -1.
-// 그리드는 16열 × 4행(행=티어) 구조라, 티어 T의 슬롯 범위는 (T-1)*16 ~ (T-1)*16+15.
-export const firstFreeSlotInTier = (tier: string, occupied: Set<number>): number => {
-    const start = (parseInt(tier) - 1) * 16;
-    for (let i = start; i < start + 16; i++) {
-        if (!occupied.has(i)) return i;
-    }
-    return -1;
-};
+// ── 기타 ────────────────────────────────────────────────────────────────
 
-// 남은 초 -> "mm:ss" (실시간 타이머 표시용)
+// 남은 초 → "mm:ss" 문자열. 사용처: AuctionPanel 타이머 표시.
 export const formatTime = (totalSeconds: number): string => {
     const s = Math.max(0, Math.floor(totalSeconds));
     const m = Math.floor(s / 60);
     const sec = s % 60;
     return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+};
+
+// 배열을 제자리(in-place) Fisher-Yates 로 섞고 그 배열을 반환한다.
+// 사용처: generateAnonNames(익명 조합), reassignAnonymous(티어 내 슬롯), drawLeaders(팀장 선정).
+export const shuffle = <T>(arr: T[]): T[] => {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+};
+
+// DB 행 배열을 { key: value } 맵으로 변환한다. (key/val 접근자를 받아 타입 안전)
+// 사용처: auctionData.ts 의 실명/PIN 조회 헬퍼들이 "행 → 맵" 변환에 공유.
+export const rowsToMap = <T>(
+    rows: T[] | null | undefined,
+    key: (row: T) => string,
+    val: (row: T) => string,
+): Record<string, string> => {
+    const map: Record<string, string> = {};
+    (rows ?? []).forEach((row) => { map[key(row)] = val(row); });
+    return map;
 };
