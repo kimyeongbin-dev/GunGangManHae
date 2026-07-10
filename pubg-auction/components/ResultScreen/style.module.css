@@ -1,11 +1,11 @@
 /* components/ResultScreen/style.module.css */
 .wrap {
     color: #eee;
-    padding: 20px;
+    padding: var(--space-5);
 }
 .title {
     color: #ff9800;
-    margin: 0 0 20px;
+    margin: 0 0 var(--space-5);
     text-align: center;
 }
 
@@ -18,13 +18,13 @@
 .th {
     color: #eee;
     border: 1px solid #333;
-    padding: 10px 18px;
+    padding: var(--space-2-5) 1.125rem; /* 1.125rem = 18px */
     background: #2d2d2d;
     white-space: nowrap;
 }
 .td {
     border: 1px solid #333;
-    padding: 9px 18px;
+    padding: var(--space-2) 1.125rem; /* 1.125rem = 18px */
     text-align: center;
     white-space: nowrap;
 }

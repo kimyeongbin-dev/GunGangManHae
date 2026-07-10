@@ -1,12 +1,12 @@
 /* components/DrawScreen/style.module.css */
 .wrap {
     color: #eee;
-    padding: 20px;
+    padding: var(--space-5);
 }
 .header {
     display: flex;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: var(--space-5);
     justify-content: space-between;
 }
 .title {
@@ -17,14 +17,14 @@
     color: #aaa;
 }
 .headerActions {
-    gap: 10px;
+    gap: var(--space-2-5);
     display: flex;
 }
 .drawBtn {
     color: #fff;
     border: none;
     cursor: pointer;
-    padding: 10px 20px;
+    padding: var(--space-2-5) var(--space-5);
     background: #9c27b0;
     border-radius: 6px;
 }
@@ -32,18 +32,18 @@
     color: #fff;
     border: none;
     cursor: pointer;
-    padding: 10px 20px;
+    padding: var(--space-2-5) var(--space-5);
     background: #f44336;
     border-radius: 6px;
 }
 .empty {
     color: #888;
-    padding: 60px 0;
+    padding: 3.75rem 0; /* 3.75rem = 60px */
     text-align: center;
 }
 
 .grid {
-    gap: 12px;
+    gap: var(--space-3);
     margin: 0 auto;
     display: grid;
     max-width: 760px;
@@ -51,16 +51,16 @@
 }
 .card {
     border: 1px solid #333;
-    padding: 16px;
+    padding: var(--space-4);
     background: #1e1e1e;
     border-radius: 8px;
 }
 .cardLabel {
     color: #777;
-    margin-bottom: 8px;
+    margin-bottom: var(--space-2);
 }
 .cardName {
-    margin-bottom: 6px;
+    margin-bottom: var(--space-1-5);
 }
 .leaderTag {
     color: #ff9800;
@@ -71,7 +71,7 @@
 .pinBox {
     color: #aaa;
     font-size: 0.8rem;
-    margin-top: 8px;
+    margin-top: var(--space-2);
     letter-spacing: 0.05em;
 }
 .pinBox b {
@@ -83,7 +83,7 @@
 /* 티어 칩 (색상은 티어별 모디파이어) */
 .chip {
     color: #fff;
-    padding: 2px 8px;
+    padding: var(--space-0-5) var(--space-2);
     border-radius: 10px;
 }
 .chipTier1 {

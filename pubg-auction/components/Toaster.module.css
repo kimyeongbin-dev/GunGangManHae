@@ -1,6 +1,6 @@
 /* components/Toaster.module.css */
 .stack {
-    gap: 10px;
+    gap: var(--space-2-5);
     top: 50%;
     left: 50%;
     display: flex;
@@ -17,7 +17,7 @@
     color: #fff;
     border: 2px solid #888;
     cursor: pointer;
-    padding: 16px 28px;
+    padding: var(--space-4) 1.75rem; /* 1.75rem = 28px */
     min-width: 220px;
     background: #1e1e1e;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
@@ -39,7 +39,7 @@
 }
 /* 방송용 큰 알림 (금색 + 더 큼) */
 .toastAnnounce {
-    padding: 24px 44px;
+    padding: var(--space-6) 2.75rem; /* 2.75rem = 44px */
     border-color: #ffb300;
     border-width: 3px;
 }
@@ -48,7 +48,7 @@
 .overlay {
     inset: 0;
     display: flex;
-    padding: 16px;
+    padding: var(--space-4);
     z-index: 10001;
     position: fixed;
     background: rgba(0, 0, 0, 0.6);
@@ -59,18 +59,18 @@
     color: #eee;
     width: min(400px, 100%);
     border: 1px solid #444;
-    padding: 24px;
+    padding: var(--space-6);
     background: #232323;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     border-radius: 10px;
 }
 .msg {
-    margin: 0 0 20px 0;
+    margin: 0 0 var(--space-5) 0;
     line-height: 1.6;
     white-space: pre-line;
 }
 .btnRow {
-    gap: 10px;
+    gap: var(--space-2-5);
     display: flex;
     justify-content: flex-end;
 }
@@ -78,7 +78,7 @@
     color: #fff;
     border: none;
     cursor: pointer;
-    padding: 9px 18px;
+    padding: var(--space-2) 1.125rem; /* 1.125rem = 18px */
     background: #555;
     border-radius: 6px;
 }
@@ -86,7 +86,7 @@
     color: #fff;
     border: none;
     cursor: pointer;
-    padding: 9px 18px;
+    padding: var(--space-2) 1.125rem; /* 1.125rem = 18px */
     background: #ff9800;
     font-weight: bold;
     border-radius: 6px;
