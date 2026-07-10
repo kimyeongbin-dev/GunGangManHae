@@ -1,9 +1,10 @@
 // components/DrawScreen/drawActions.ts
 // 팀장(뽑기권) 추첨: 티어 제약 없이 무작위 16명을 뽑아 각 팀에 배정.
-// 재추첨은 기존 팀 구성/입찰/타이머를 초기화한 뒤 새로 뽑는다.
+// 재추첨/해제는 팀 구성·입찰·로그·타이머를 초기화하고 익명/슬롯을 다시 섞은 뒤 진행한다.
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from '@/lib/toast';
 import { TEAM_COUNT } from '../AuctionScreen/types';
+import { reassignAnonymous } from '../AuctionScreen/anonActions';
 import type { Participant } from '../AuctionScreen/types';
 
 // 팀장 PIN 생성: 혼동 문자(O,0,I,1,L) 제외한 6자리
@@ -28,11 +29,15 @@ export async function drawLeaders() {
         return;
     }
 
-    // 1) 기존 팀 구성/공개명/입찰/타이머/팀장PIN 전체 초기화 (재추첨 = 팀 재설정)
+    // 1) 기존 팀 구성/공개명/입찰/로그/타이머/팀장PIN 전체 초기화 (재추첨 = 팀 재설정)
     await supabase.from('participants').update({ team_name: null, is_leader: false, reveal_name: null }).not('p_token', 'is', null);
     await supabase.from('auction_bids').delete().neq('id', 0);
     await supabase.from('leader_pins').delete().neq('team_name', '');
+    await supabase.from('auction_logs').delete().neq('id', 0);
     await supabase.from('auction_meta').update({ timer_end_at: null, status: 'idle', current_p_token: null }).eq('id', 1);
+
+    // 1b) 익명(fake_name) 재배정 + 동일 티어 내 슬롯 셔플
+    await reassignAnonymous(participants);
 
     // 2) 무작위 16명 선정 (Fisher-Yates)
     const shuffled = [...participants];
@@ -65,12 +70,21 @@ export async function drawLeaders() {
     await supabase.from('auction_logs').insert({ message: `팀장 추첨 완료 (${TEAM_COUNT}팀)` });
 }
 
-// 팀장 해제: 모든 팀장직을 박탈하고 팀 구성/입찰/타이머를 초기화 → 전원 익명 미배정 상태로 복귀.
+// 팀장 해제: 모든 팀장직을 박탈하고 팀 구성/입찰/로그/타이머를 초기화 + 익명/슬롯 재배정
+// → 전원 익명 미배정 상태로 복귀.
 export async function releaseLeaders() {
+    const { data } = await supabase.from('participants').select('*');
+    const participants = (data ?? []) as Participant[];
+
     await supabase.from('participants').update({ team_name: null, is_leader: false, reveal_name: null }).not('p_token', 'is', null);
     await supabase.from('auction_bids').delete().neq('id', 0);
     await supabase.from('leader_pins').delete().neq('team_name', '');
+    await supabase.from('auction_logs').delete().neq('id', 0);
     await supabase.from('auction_meta').update({ timer_end_at: null, status: 'idle', current_p_token: null }).eq('id', 1);
+
+    // 익명(fake_name) 재배정 + 동일 티어 내 슬롯 셔플
+    await reassignAnonymous(participants);
+
     // 안내는 로그 기반 announce가 모두에게 표시
     await supabase.from('auction_logs').insert({ message: '팀장 해제 (전원 익명 참가자로 복귀)' });
 }

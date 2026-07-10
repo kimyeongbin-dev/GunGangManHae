@@ -6,11 +6,10 @@ import { toast } from '@/lib/toast';
 import { generateAnonNames } from './anonNames';
 import type { Participant } from './types';
 
-export async function regenerateAnonymous() {
-    const { data, error } = await supabase.from('participants').select('*');
-    if (error) { toast.error('참가자 조회 실패: ' + error.message); return; }
-    const participants = (data ?? []) as Participant[];
-    if (participants.length === 0) { toast.error('등록된 참가자가 없습니다.'); return; }
+// 코어: 주어진 참가자 목록에 익명(fake_name)을 재배정하고 동일 티어 내 슬롯을 셔플한다.
+// 토스트 없음 → 추첨/해제 등 다른 흐름에서 재사용 (성공 여부만 반환).
+export async function reassignAnonymous(participants: Participant[]): Promise<boolean> {
+    if (participants.length === 0) return true;
 
     const names = generateAnonNames(participants.length);
     const updates: { p_token: string; fake_name: string; slot_index: number }[] = [];
@@ -34,6 +33,17 @@ export async function regenerateAnonymous() {
             supabase.from('participants').update({ fake_name: u.fake_name, slot_index: u.slot_index }).eq('p_token', u.p_token),
         ),
     );
-    if (results.find((r) => r.error)) { toast.error('익명 생성 중 오류가 발생했습니다.'); return; }
+    return !results.find((r) => r.error);
+}
+
+// 헤더 '익명 만들기' 버튼용: 전 참가자 조회 → 재배정 + 안내 토스트.
+export async function regenerateAnonymous() {
+    const { data, error } = await supabase.from('participants').select('*');
+    if (error) { toast.error('참가자 조회 실패: ' + error.message); return; }
+    const participants = (data ?? []) as Participant[];
+    if (participants.length === 0) { toast.error('등록된 참가자가 없습니다.'); return; }
+
+    const ok = await reassignAnonymous(participants);
+    if (!ok) { toast.error('익명 생성 중 오류가 발생했습니다.'); return; }
     toast.success('익명이 생성되었습니다.');
 }
