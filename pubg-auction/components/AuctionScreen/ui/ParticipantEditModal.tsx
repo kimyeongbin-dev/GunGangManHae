@@ -7,13 +7,17 @@ import type { ModalForm } from '../types';
 
 type Props = {
     initialForm: ModalForm;
+    masked: boolean; // 진행자가 '익명 보는 중'이면 true → 비제이명(실명)을 가려서 시작
     onSave: (form: ModalForm) => Promise<boolean>;
     onDelete: (p_token: string) => Promise<boolean>;
     onClose: () => void;
 };
 
-export default function ParticipantEditModal({ initialForm, onSave, onDelete, onClose }: Props) {
+export default function ParticipantEditModal({ initialForm, masked, onSave, onDelete, onClose }: Props) {
     const [form, setForm] = useState<ModalForm>(initialForm);
+    // 실명 표시 여부: 익명 모드(masked)면 기본 가림, 아니면 항상 표시.
+    // 값 자체는 그대로 두고 화면 표시만 password로 가리므로 저장 시 이름이 지워지지 않는다.
+    const [showName, setShowName] = useState(!masked);
 
     const handleSave = async () => {
         const ok = await onSave(form);
@@ -31,7 +35,21 @@ export default function ParticipantEditModal({ initialForm, onSave, onDelete, on
                 <h3>{form.p_token ? '참가자 수정' : '참가자 등록'}</h3>
                 <div className={styles.formGroup}>
                     <label className={`${fonts.formLabel} ${styles.editLabel}`}>비제이명</label>
-                    <input type="text" placeholder="예: 홍길동" className={styles.formInput} value={form.real_name} onChange={(e) => setForm({ ...form, real_name: e.target.value })} />
+                    <div className={styles.nameFieldRow}>
+                        <input
+                            type={showName ? 'text' : 'password'}
+                            autoComplete="off"
+                            placeholder="예: 홍길동"
+                            className={`${styles.formInput} ${styles.nameInput}`}
+                            value={form.real_name}
+                            onChange={(e) => setForm({ ...form, real_name: e.target.value })}
+                        />
+                        {masked && (
+                            <button type="button" className={styles.revealBtn} onClick={() => setShowName((v) => !v)}>
+                                {showName ? '가리기' : '보기'}
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className={styles.formGroup}>
                     <label className={`${fonts.formLabel} ${styles.editLabel}`}>티어</label>
@@ -47,7 +65,13 @@ export default function ParticipantEditModal({ initialForm, onSave, onDelete, on
                 </div>
                 <div className={styles.formGroup}>
                     <label className={`${fonts.formLabel} ${styles.editLabel}`}>소갯말</label>
-                    <input type="text" placeholder="한 줄 소갯말을 입력하세요" className={styles.formInput} value={form.intro} onChange={(e) => setForm({ ...form, intro: e.target.value })} />
+                    <textarea
+                        rows={4}
+                        placeholder="소갯말을 입력하세요 (여러 줄 가능)"
+                        className={styles.formTextarea}
+                        value={form.intro}
+                        onChange={(e) => setForm({ ...form, intro: e.target.value })}
+                    />
                 </div>
 
                 <div className={styles.modalButtons}>

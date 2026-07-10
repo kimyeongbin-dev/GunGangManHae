@@ -192,6 +192,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
             {editSlot !== null && (
                 <ParticipantEditModal
                     initialForm={editForm}
+                    masked={!showReal}
                     onSave={team.saveParticipant}
                     onDelete={team.deleteParticipant}
                     onClose={() => setEditSlot(null)}

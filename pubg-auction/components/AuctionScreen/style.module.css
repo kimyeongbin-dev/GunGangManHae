@@ -623,6 +623,39 @@
 .editLabel {
     margin-bottom: var(--space-0-5);
 }
+/* 비제이명 줄: 입력칸 + (익명 모드일 때) 보기/가리기 토글 */
+.nameFieldRow {
+    gap: var(--space-2);
+    display: flex;
+    align-items: center;
+}
+.nameInput {
+    flex: 1;
+    min-width: 0;
+}
+.revealBtn {
+    color: #ddd;
+    border: 1px solid #555;
+    cursor: pointer;
+    padding: var(--space-2-5) var(--space-3);
+    background: #444;
+    white-space: nowrap;
+    border-radius: 4px;
+}
+/* 소갯말: 여러 줄 입력 + 길어지면 세로 스크롤 */
+.formTextarea {
+    font: inherit;
+    color: white;
+    border: 1px solid #555;
+    resize: vertical;
+    padding: var(--space-2-5);
+    background: #333;
+    max-height: 200px;
+    min-height: 5.5rem;
+    overflow-y: auto;
+    line-height: 1.5;
+    border-radius: 4px;
+}
 .saveBtn {
     background: #4caf50;
 }
