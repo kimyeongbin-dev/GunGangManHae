@@ -16,9 +16,9 @@ type Options = {
 };
 
 export function useTeamManagement({ participants, auctionBids, auctionTarget, auctionRunning, isAdmin }: Options) {
-    // 공유 경매 대상 해제 (auction_meta.current_p_token = null → 모든 클라이언트 반영)
+    // 경매 종료 후 공유 상태를 idle로 정리 (대상 해제 + status/timer 초기화 → 낙찰/유찰 뒤 잔여 running 방지)
     const clearTarget = () =>
-        supabase.from('auction_meta').update({ current_p_token: null }).eq('id', 1);
+        supabase.from('auction_meta').update({ current_p_token: null, status: 'idle', timer_end_at: null }).eq('id', 1);
 
     // 현재 대상자의 최고 입찰가 (입찰 목록에서 파생)
     const currentHighestBid = useMemo(() => {
