@@ -6,10 +6,8 @@ import { supabase } from '../lib/supabaseClient'; // (경로 확인 필요 시 �
 import { toast, confirmDialog } from '../lib/toast';
 import AuctionScreen from '../components/AuctionScreen';
 import DrawScreen from '../components/DrawScreen';
+import ResultScreen from '../components/ResultScreen';
 import { regenerateAnonymous } from '../components/AuctionScreen/anonActions';
-
-// 3단계 결과 화면 (준비 중)
-const ResultScreen = () => <div className={styles.placeholder}>3단계: 최종 팀 편성 결과 화면 (준비 중)</div>;
 
 export default function MainApp() {
   // 상태 관리
@@ -71,7 +69,7 @@ export default function MainApp() {
     <div className={styles.container}>
       {/* --- 상단 헤더 & 진행자 컨트롤 --- */}
       <header className={styles.header}>
-        <h1 className={styles.title}>PUBG 블라인드 팀 뽑기</h1>
+        <h1 className={styles.title}>건강만해 블라인드 팀 뽑기</h1>
         
         <div className={styles.adminSection}>
           {!isAdmin ? (

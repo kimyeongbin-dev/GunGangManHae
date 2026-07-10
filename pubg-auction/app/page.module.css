@@ -51,4 +51,3 @@
 .navButtons { display: flex; align-items: center; gap: 10px; }
 .adminBadge { color: #4caf50; font-weight: bold; margin-right: 10px; }
 .loading { padding: 60px 20px; text-align: center; color: #888; }
-.placeholder { padding: 20px; text-align: center; }
