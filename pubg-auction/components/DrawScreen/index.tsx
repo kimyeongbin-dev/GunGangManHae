@@ -84,9 +84,10 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
                                         <span className={`${fonts.tierChip} ${styles.chip} ${styles[`chipTier${leader.tier}`]}`}>
                                             {leader.tier}티어
                                         </span>
-                                        {/* PIN은 진행자가 '실명 보는 중'일 때만 노출(익명 모드에선 참가자처럼 숨김) */}
-                                        {isAdmin && revealNames && pins[teamName] && (
-                                            <div className={styles.pinBox}>PIN <b>{pins[teamName]}</b></div>
+                                        {/* PIN: 진행자에게만 표시. '실명 보는 중'이면 실제 PIN, '익명 보는 중'이면 마스킹(••••).
+                                            참가자/관전자는 pins 자체가 비어 있어 아무것도 보이지 않는다. */}
+                                        {isAdmin && pins[teamName] && (
+                                            <div className={styles.pinBox}>PIN <b>{revealNames ? pins[teamName] : '••••'}</b></div>
                                         )}
                                     </>
                                 ) : (
