@@ -5,7 +5,7 @@ import { TEAM_COUNT } from '../AuctionScreen/types';
 import { confirmDialog } from '@/lib/toast';
 import fonts from '../typography.module.css';
 import styles from './style.module.css';
-import { drawLeaders } from './drawActions';
+import { drawLeaders, releaseLeaders } from './drawActions';
 
 export default function DrawScreen({ isAdmin }: { isAdmin: boolean }) {
     const { participants } = useRealtimeAuction();
@@ -16,6 +16,11 @@ export default function DrawScreen({ isAdmin }: { isAdmin: boolean }) {
         await drawLeaders();
     };
 
+    const handleRelease = async () => {
+        if (!(await confirmDialog('모든 팀장을 해제하고 익명 참가자로 되돌립니다.\n팀 구성과 경매 내역도 모두 초기화됩니다. 계속하시겠습니까?'))) return;
+        await releaseLeaders();
+    };
+
     return (
         <div className={styles.wrap}>
             <div className={styles.header}>
@@ -23,9 +28,16 @@ export default function DrawScreen({ isAdmin }: { isAdmin: boolean }) {
                     1단계 · 팀장 추첨 <span className={`${fonts.drawCount} ${styles.count}`}>({leaders.length}/{TEAM_COUNT}팀)</span>
                 </h2>
                 {isAdmin && (
-                    <button onClick={handleDraw} className={`${fonts.drawBtn} ${styles.drawBtn}`}>
-                        {leaders.length > 0 ? '팀장 다시 추첨' : '팀장 추첨'}
-                    </button>
+                    <div className={styles.headerActions}>
+                        {leaders.length > 0 && (
+                            <button onClick={handleRelease} className={`${fonts.drawBtn} ${styles.releaseBtn}`}>
+                                팀장 해제
+                            </button>
+                        )}
+                        <button onClick={handleDraw} className={`${fonts.drawBtn} ${styles.drawBtn}`}>
+                            {leaders.length > 0 ? '팀장 다시 추첨' : '팀장 추첨'}
+                        </button>
+                    </div>
                 )}
             </div>
 

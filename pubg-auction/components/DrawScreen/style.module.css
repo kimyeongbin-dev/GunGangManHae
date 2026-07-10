@@ -3,7 +3,9 @@
 .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .title { margin: 0; color: #ff9800; }
 .count { color: #aaa; }
+.headerActions { display: flex; gap: 10px; }
 .drawBtn { background: #9c27b0; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer; }
+.releaseBtn { background: #f44336; color: #fff; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer; }
 .empty { text-align: center; color: #888; padding: 60px 0; }
 
 .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 760px; margin: 0 auto; }

@@ -21,10 +21,13 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
     const { participants, auctionBids, logs, clearLogs } = useRealtimeAuction();
 
     // --- 화면 조작 상태 (로컬 UI 전용) ---
-    const [viewingTarget, setViewingTarget] = useState<Participant | null>(null); // 상세 보기
+    // 상세 보기는 토큰만 저장하고 실시간 목록에서 대상을 파생 → 초기화/재추첨/공석 변경이 팝업에 즉시 반영
+    const [viewingToken, setViewingToken] = useState<string | null>(null);
     const [editSlot, setEditSlot] = useState<number | null>(null);                // 편집 모달 대상 슬롯
     const [editForm, setEditForm] = useState<ModalForm>(EMPTY_FORM);
     const showReal = isAdmin && revealNames; // 실명(비제이명) 표시 여부 (revealNames는 page.tsx에서 주입)
+
+    const viewingTarget = participants.find((p) => p.p_token === viewingToken) ?? null;
 
     // --- 타이머 로직 ---
     // 만료 시 자동 낙찰은 팀 로직에 위임. 훅 간 순환참조를 피하기 위해 ref 경유.
@@ -61,7 +64,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
     const handleCellClick = (slotIndex: number) => {
         const p = participants.find((part) => part.slot_index === slotIndex);
         if (p) {
-            setViewingTarget(p);
+            setViewingToken(p.p_token);
         } else if (isAdmin) {
             setEditForm({ ...EMPTY_FORM, tier: getTierBySlot(slotIndex) });
             setEditSlot(slotIndex);
@@ -86,13 +89,13 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
         if (p.team_name) { toast.error('이미 낙찰된 참가자입니다. 낙찰을 취소한 뒤 다시 올릴 수 있습니다.'); return; }
         if (auctionRunning) { toast.error('경매 진행 중에는 대상을 바꿀 수 없습니다.'); return; }
         timer.setTargetToken(p.p_token);
-        setViewingTarget(null);
+        setViewingToken(null);
     };
 
     // 낙찰 취소 (팀 배정/소모 포인트 되돌리기)
     const handleRevertWin = async (p: Participant) => {
         const ok = await team.revertWin(p);
-        if (ok) setViewingTarget(null);
+        if (ok) setViewingToken(null);
     };
 
     // 경매 시작 / 재시작. 진행 중이면 현재 회차 입찰 초기화 후 타이머 재시작.
@@ -142,6 +145,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
                     isAdmin={isAdmin}
                     showReal={showReal}
                     onResetAuction={team.resetAuction}
+                    onViewMember={(p) => setViewingToken(p.p_token)}
                 />
             </div>
 
@@ -153,7 +157,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
                     showReal={showReal}
                     auctionRunning={auctionRunning}
                     finalPrice={team.memberPrices[viewingTarget.p_token] ?? 0}
-                    onClose={() => setViewingTarget(null)}
+                    onClose={() => setViewingToken(null)}
                     onAssignTarget={handleAssignTarget}
                     onRevertWin={handleRevertWin}
                 />

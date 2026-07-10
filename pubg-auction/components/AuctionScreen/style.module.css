@@ -140,6 +140,18 @@
 .teamPts { color: #ff9800; display: block; font-size: var(--fs-team-pts); margin-top: 2px; }
 .teamMemberCell { width: 20%; }
 .emptyMember { color: #555; font-style: italic; }
+/* 팀원 셀 클릭 → 상세 팝업 (셀 텍스트 스타일을 그대로 상속) */
+.memberLink {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+.memberLink:hover { text-decoration: underline; }
 
 /* 팝업 외부 전체를 감싸는 영역 */
 .modalOverlay {

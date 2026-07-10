@@ -13,14 +13,21 @@ type Props = {
     isAdmin: boolean;
     showReal: boolean;
     onResetAuction: () => void;
+    onViewMember: (member: Participant) => void;
 };
 
-export default function TeamEntryTable({ participants, teamPoints, memberPrices, isAdmin, showReal, onResetAuction }: Props) {
+export default function TeamEntryTable({ participants, teamPoints, memberPrices, isAdmin, showReal, onResetAuction, onViewMember }: Props) {
     const renderMember = (m?: Participant) => {
         if (!m) return <span className={styles.emptyMember}>공석</span>;
-        // 팀장은 낙찰가 없이 "비제이명(팀장)", 그 외엔 이름과 낙찰가
-        if (m.is_leader) return participantLabel(m, showReal);
-        return `${participantLabel(m, showReal)} (${memberPrices[m.p_token] ?? 0}P)`;
+        // 팀장은 낙찰가 없이 "비제이명(팀장)", 그 외엔 이름과 낙찰가. 클릭 시 상세 정보 팝업.
+        const label = m.is_leader
+            ? participantLabel(m, showReal)
+            : `${participantLabel(m, showReal)} (${memberPrices[m.p_token] ?? 0}P)`;
+        return (
+            <button type="button" className={styles.memberLink} onClick={() => onViewMember(m)}>
+                {label}
+            </button>
+        );
     };
 
     return (

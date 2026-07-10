@@ -39,3 +39,12 @@ export async function drawLeaders() {
     // 완료 안내는 로그 기반 announce가 모두에게 표시
     await supabase.from('auction_logs').insert({ message: `팀장 추첨 완료 (${TEAM_COUNT}팀)` });
 }
+
+// 팀장 해제: 모든 팀장직을 박탈하고 팀 구성/입찰/타이머를 초기화 → 전원 익명 미배정 상태로 복귀.
+export async function releaseLeaders() {
+    await supabase.from('participants').update({ team_name: null, is_leader: false }).not('p_token', 'is', null);
+    await supabase.from('auction_bids').delete().neq('id', 0);
+    await supabase.from('auction_meta').update({ timer_end_at: null, status: 'idle', current_p_token: null }).eq('id', 1);
+    // 안내는 로그 기반 announce가 모두에게 표시
+    await supabase.from('auction_logs').insert({ message: '팀장 해제 (전원 익명 참가자로 복귀)' });
+}
