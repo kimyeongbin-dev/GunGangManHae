@@ -7,6 +7,7 @@ import { useRealtimeAuction } from './hooks/useRealtimeAuction';
 import { useAuctionTimer } from './hooks/useAuctionTimer';
 import { useTeamManagement } from './hooks/useTeamManagement';
 import { useLeaderAuth } from './hooks/useLeaderAuth';
+import { useAdminNames } from './hooks/useAdminNames';
 import { getTierBySlot } from './utils';
 import UnassignedGrid from './ui/UnassignedGrid';
 import AuctionPanel from './ui/AuctionPanel';
@@ -27,6 +28,10 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
     const [editSlot, setEditSlot] = useState<number | null>(null);                // 편집 모달 대상 슬롯
     const [editForm, setEditForm] = useState<ModalForm>(EMPTY_FORM);
     const showReal = isAdmin && revealNames; // 실명(비제이명) 표시 여부 (revealNames는 page.tsx에서 주입)
+
+    // 진행자 전용 실명 맵(secrets). showReal일 때만 화면에 실명으로 노출.
+    const adminNames = useAdminNames(isAdmin, participants.length);
+    const displayNames = showReal ? adminNames : undefined;
 
     const viewingTarget = participants.find((p) => p.p_token === viewingToken) ?? null;
 
@@ -78,7 +83,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
     const handleEditParticipant = (p: Participant, slotIndex: number) => {
         setEditForm({
             p_token: p.p_token,
-            real_name: p.real_name,
+            real_name: adminNames[p.p_token] ?? '',
             tier: p.tier,
             avg_damage: p.avg_damage.toString(),
             intro: p.intro || '',
@@ -119,7 +124,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
             <UnassignedGrid
                 participants={participants}
                 isAdmin={isAdmin}
-                showReal={showReal}
+                realNames={displayNames}
                 onCellClick={handleCellClick}
                 onEditParticipant={handleEditParticipant}
             />
@@ -128,7 +133,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
             <div className={styles.rightPanel}>
                 <AuctionPanel
                     isAdmin={isAdmin}
-                    showReal={showReal}
+                    realNames={displayNames}
                     participants={participants}
                     auctionTarget={auctionTarget}
                     currentHighestBid={team.currentHighestBid}
@@ -149,7 +154,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
                     teamPoints={team.teamPoints}
                     memberPrices={team.memberPrices}
                     isAdmin={isAdmin}
-                    showReal={showReal}
+                    realNames={displayNames}
                     onResetAuction={team.resetAuction}
                     onViewMember={(p) => setViewingToken(p.p_token)}
                 />
@@ -160,7 +165,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
                 <ParticipantDetailModal
                     target={viewingTarget}
                     isAdmin={isAdmin}
-                    showReal={showReal}
+                    realName={displayNames?.[viewingTarget.p_token]}
                     auctionRunning={auctionRunning}
                     finalPrice={team.memberPrices[viewingTarget.p_token] ?? 0}
                     onClose={() => setViewingToken(null)}

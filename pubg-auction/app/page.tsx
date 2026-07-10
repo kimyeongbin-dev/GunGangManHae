@@ -51,10 +51,10 @@ export default function MainApp() {
   }, []);
 
   // 진행자 버튼 로직 (DB 업데이트를 통해 모든 참가자 화면 동기화)
+  // DB를 먼저 갱신한 뒤 화면 전환 → 결과 화면의 result_names()가 page_state='result'를 보게 함
   const changePageAsAdmin = async (pageName: 'draw' | 'auction' | 'result') => {
-    setCurrentView(pageName); // 내 화면 즉시 변경
-    // Supabase DB 업데이트 로직
-    await supabase.from('page_state').update({ current_page: pageName }).eq('id', 1); 
+    await supabase.from('page_state').update({ current_page: pageName }).eq('id', 1);
+    setCurrentView(pageName);
   };
   
   // 진행자 인증 로직 (Supabase Auth: 서버에서 비밀번호 검증 → JWT 발급)
@@ -149,7 +149,7 @@ export default function MainApp() {
           <div className={styles.loading}>불러오는 중…</div>
         ) : (
           <>
-            {currentView === 'draw' && <DrawScreen isAdmin={isAdmin} />}
+            {currentView === 'draw' && <DrawScreen isAdmin={isAdmin} revealNames={revealNames} />}
             {currentView === 'auction' && <AuctionScreen isAdmin={isAdmin} revealNames={revealNames} />}
             {currentView === 'result' && <ResultScreen />}
           </>

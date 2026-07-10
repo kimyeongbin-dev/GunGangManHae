@@ -28,8 +28,8 @@ export async function drawLeaders() {
         return;
     }
 
-    // 1) 기존 팀 구성/입찰/타이머/팀장PIN 전체 초기화 (재추첨 = 팀 재설정)
-    await supabase.from('participants').update({ team_name: null, is_leader: false }).not('p_token', 'is', null);
+    // 1) 기존 팀 구성/공개명/입찰/타이머/팀장PIN 전체 초기화 (재추첨 = 팀 재설정)
+    await supabase.from('participants').update({ team_name: null, is_leader: false, reveal_name: null }).not('p_token', 'is', null);
     await supabase.from('auction_bids').delete().neq('id', 0);
     await supabase.from('leader_pins').delete().neq('team_name', '');
     await supabase.from('auction_meta').update({ timer_end_at: null, status: 'idle', current_p_token: null }).eq('id', 1);
@@ -42,10 +42,15 @@ export async function drawLeaders() {
     }
     const leaders = shuffled.slice(0, TEAM_COUNT);
 
-    // 3) 각 팀장에 팀 배정 (뽑힌 순서대로 1~16팀)
+    // 3) 각 팀장에 팀 배정 + 공개명(reveal_name) 설정 (팀장 실명은 secrets에서 조회)
+    const tokens = leaders.map((l) => l.p_token);
+    const { data: secretRows } = await supabase.from('participant_secrets').select('p_token, real_name').in('p_token', tokens);
+    const realMap = new Map(((secretRows ?? []) as { p_token: string; real_name: string }[]).map((r) => [r.p_token, r.real_name]));
     const results = await Promise.all(
         leaders.map((p, i) =>
-            supabase.from('participants').update({ is_leader: true, team_name: `${i + 1}팀` }).eq('p_token', p.p_token),
+            supabase.from('participants')
+                .update({ is_leader: true, team_name: `${i + 1}팀`, reveal_name: realMap.get(p.p_token) ?? null })
+                .eq('p_token', p.p_token),
         ),
     );
     if (results.find((r) => r.error)) { toast.error('팀장 추첨 중 오류가 발생했습니다.'); return; }
@@ -62,7 +67,7 @@ export async function drawLeaders() {
 
 // 팀장 해제: 모든 팀장직을 박탈하고 팀 구성/입찰/타이머를 초기화 → 전원 익명 미배정 상태로 복귀.
 export async function releaseLeaders() {
-    await supabase.from('participants').update({ team_name: null, is_leader: false }).not('p_token', 'is', null);
+    await supabase.from('participants').update({ team_name: null, is_leader: false, reveal_name: null }).not('p_token', 'is', null);
     await supabase.from('auction_bids').delete().neq('id', 0);
     await supabase.from('leader_pins').delete().neq('team_name', '');
     await supabase.from('auction_meta').update({ timer_end_at: null, status: 'idle', current_p_token: null }).eq('id', 1);

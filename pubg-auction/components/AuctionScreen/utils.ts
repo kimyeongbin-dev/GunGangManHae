@@ -12,14 +12,21 @@ export const getTierBySlot = (slotIndex: number): string => {
 
 import type { Participant } from './types';
 
-// 참가자 표시 이름: 팀장은 항상 "비제이명(팀장)"으로 공개, 그 외엔 showReal에 따라 실명/익명.
-export const participantLabel = (p: Participant, showReal: boolean): string =>
-    p.is_leader ? `${p.real_name}(팀장)` : (showReal ? p.real_name : (p.fake_name || '?'));
+// 참가자 표시 이름.
+//  - realName 인자: 이 참가자를 실명으로 보여줄 수 있으면 실명 문자열, 아니면 undefined.
+//    (진행자 실명모드=secrets, 결과화면=result_names RPC 에서 해석해 넘긴다)
+//  - realName 이 없으면 reveal_name(팀장/공개) → 없으면 fake_name(블라인드) 순.
+export const participantLabel = (p: Participant, realName?: string): string => {
+    const shown = realName ?? p.reveal_name ?? p.fake_name ?? '?';
+    return p.is_leader ? `${shown}(팀장)` : shown;
+};
 
-// 팀 표시 이름: "비제이명팀(N팀)". 팀장이 없으면 원래 "N팀".
-export const teamLabel = (teamName: string, participants: Participant[]): string => {
+// 팀 표시 이름: "비제이명팀-N팀". 팀장이 없으면 원래 "N팀".
+export const teamLabel = (teamName: string, participants: Participant[], realNames?: Record<string, string>): string => {
     const leader = participants.find((p) => p.is_leader && p.team_name === teamName);
-    return leader ? `${leader.real_name}팀-${teamName}` : teamName;
+    if (!leader) return teamName;
+    const name = realNames?.[leader.p_token] ?? leader.reveal_name ?? leader.fake_name;
+    return `${name}팀-${teamName}`;
 };
 
 // 티어(1~4) 행에서 비어있는 첫 슬롯 인덱스. 자리가 없으면 -1.

@@ -8,7 +8,7 @@ import type { Participant } from '../types';
 type Props = {
     target: Participant;
     isAdmin: boolean;
-    showReal: boolean;
+    realName?: string; // 진행자 실명모드에서만 전달된 실명
     auctionRunning: boolean;
     finalPrice: number; // 낙찰가 (team_name 있을 때 의미)
     onClose: () => void;
@@ -16,14 +16,14 @@ type Props = {
     onRevertWin: (target: Participant) => void;
 };
 
-export default function ParticipantDetailModal({ target, isAdmin, showReal, auctionRunning, finalPrice, onClose, onAssignTarget, onRevertWin }: Props) {
+export default function ParticipantDetailModal({ target, isAdmin, realName, auctionRunning, finalPrice, onClose, onAssignTarget, onRevertWin }: Props) {
     return (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.detailModalContent} onClick={(e) => e.stopPropagation()}>
                 <button className={styles.closeButton} onClick={onClose}>×</button>
 
                 {/* 핵심 정보 상단 배치 */}
-                <h2 className={styles.detailName}>{participantLabel(target, showReal)}</h2>
+                <h2 className={styles.detailName}>{participantLabel(target, realName)}</h2>
                 <div className={styles.infoGrid}>
                     {/* 티어 배지: tier 값에 따라 클래스 동적 할당 */}
                     <span className={`${styles.statBadge} ${styles[`tier${target.tier}Badge`]}`}>
@@ -52,9 +52,9 @@ export default function ParticipantDetailModal({ target, isAdmin, showReal, auct
                     ) : null}
 
                     {/* 실명 공개 시에만 비제이명 표시 */}
-                    {showReal && (
+                    {realName && (
                         <span className={`${styles.statBadge} ${styles.badgeReal}`}>
-                            비제이명: {target.real_name}
+                            비제이명: {realName}
                         </span>
                     )}
                 </div>

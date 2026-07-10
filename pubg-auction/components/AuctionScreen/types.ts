@@ -3,7 +3,7 @@
 export type Participant = {
     slot_index: number;
     p_token: string;
-    real_name: string;
+    reveal_name: string | null; // 공개 표시용 이름. 팀장/결과공개 시에만 채워짐(그 외 null=블라인드)
     fake_name: string;
     tier: string;
     avg_damage: number;

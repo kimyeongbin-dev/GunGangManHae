@@ -23,6 +23,19 @@ anon 키는 공개돼도 안전합니다 — 쓰기가 전부 RLS/RPC 뒤에 잠
 3. **마이그레이션 실행** — SQL Editor에 `migrations/0001_security_lockdown.sql` 전체 붙여넣고 Run
 4. 클라이언트의 `ADMIN_EMAIL` 상수(`app/page.tsx`)가 1번 이메일과 같은지 확인
 
+## 실명 블라인드 (0002_hide_real_names.sql)
+
+0001 실행 후 이어서 `migrations/0002_hide_real_names.sql`도 실행하세요.
+
+- `participants.real_name` 제거 → **anon/Realtime로 실명이 더 이상 안 나감** (F12 방어)
+- 실명은 `participant_secrets`(진행자만)로 이동. 기존 데이터는 자동 이관됨
+- 공개 표시는 `participants.reveal_name` — **팀장만** 채워짐(그 외 블라인드)
+- 결과 화면은 `result_names()` RPC로 `page_state='result'`일 때만 실명 공개
+
+> **주의(시드 데이터)**: 0002 이후에는 참가자를 추가할 때 `participants`에
+> `real_name`을 넣으면 안 됩니다. `participants`(real_name 제외) + `participant_secrets`
+> 두 곳에 나눠 INSERT 하세요. (앱의 참가자 등록은 이미 이렇게 동작함)
+
 ## 팀장 PIN 운영
 
 - 진행자가 **추첨**을 하면 16팀 PIN이 자동 발급되어 `leader_pins`에 저장됩니다.
@@ -32,6 +45,6 @@ anon 키는 공개돼도 안전합니다 — 쓰기가 전부 RLS/RPC 뒤에 잠
 
 ## 알려진 잔여 항목 (다음 단계 후보)
 
-- **실명 노출**: `participants.real_name`이 anon에게도 읽힘 → F12로 익명 참가자 실명 조회 가능.
-  블라인드를 진짜로 강제하려면 뷰/컬럼 분리 필요 (별도 작업).
 - PIN 무차별 대입 방지용 레이트리밋 (현재 6자리, 단기 대회엔 충분).
+- `intro`(소갯말)는 여전히 anon에게 공개됨 — 블라인드 바이오로 의도된 것이지만,
+  식별 정보가 담기면 노출될 수 있으니 운영 시 주의.

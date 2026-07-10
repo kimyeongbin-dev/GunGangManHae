@@ -11,18 +11,17 @@ type Props = {
     teamPoints: Record<string, number>;
     memberPrices: Record<string, number>;
     isAdmin: boolean;
-    showReal: boolean;
+    realNames?: Record<string, string>; // 진행자 실명모드에서만 전달
     onResetAuction: () => void;
     onViewMember: (member: Participant) => void;
 };
 
-export default function TeamEntryTable({ participants, teamPoints, memberPrices, isAdmin, showReal, onResetAuction, onViewMember }: Props) {
+export default function TeamEntryTable({ participants, teamPoints, memberPrices, isAdmin, realNames, onResetAuction, onViewMember }: Props) {
     const renderMember = (m?: Participant) => {
         if (!m) return <span className={styles.emptyMember}>공석</span>;
         // 팀장은 낙찰가 없이 "비제이명(팀장)", 그 외엔 이름과 낙찰가. 클릭 시 상세 정보 팝업.
-        const label = m.is_leader
-            ? participantLabel(m, showReal)
-            : `${participantLabel(m, showReal)} (${memberPrices[m.p_token] ?? 0}P)`;
+        const name = participantLabel(m, realNames?.[m.p_token]);
+        const label = m.is_leader ? name : `${name} (${memberPrices[m.p_token] ?? 0}P)`;
         return (
             <button type="button" className={styles.memberLink} onClick={() => onViewMember(m)}>
                 {label}
@@ -57,7 +56,7 @@ export default function TeamEntryTable({ participants, teamPoints, memberPrices,
 
                         return (
                             <tr key={i}>
-                                <td className={`${styles.teamTd} ${styles.teamIdentity}`}>[{teamLabel(teamName, participants)}] <span className={styles.teamPts}>{teamPoints[teamName]} / {TEAM_BUDGET} pts</span></td>
+                                <td className={`${styles.teamTd} ${styles.teamIdentity}`}>[{teamLabel(teamName, participants, realNames)}] <span className={styles.teamPts}>{teamPoints[teamName]} / {TEAM_BUDGET} pts</span></td>
                                 <td className={`${styles.teamTd} ${styles.teamMemberCell}`}>{renderMember(members.find((p) => p.tier === "1"))}</td>
                                 <td className={`${styles.teamTd} ${styles.teamMemberCell}`}>{renderMember(members.find((p) => p.tier === "2"))}</td>
                                 <td className={`${styles.teamTd} ${styles.teamMemberCell}`}>{renderMember(members.find((p) => p.tier === "3"))}</td>

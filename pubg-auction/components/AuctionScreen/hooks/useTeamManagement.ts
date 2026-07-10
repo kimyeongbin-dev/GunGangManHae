@@ -60,7 +60,7 @@ export function useTeamManagement({ participants, auctionBids, auctionTarget, au
             return false;
         }
 
-        // 편집: 이름/티어/딜량/소갯말만 갱신 (익명 유지, 티어 변경 시에만 슬롯 이동)
+        // 편집: 티어/딜량/소갯말/슬롯은 participants, 실명은 participant_secrets(진행자 전용)에 저장
         if (p_token) {
             const existing = participants.find((p) => p.p_token === p_token);
             let slot_index = existing?.slot_index ?? null;
@@ -72,28 +72,33 @@ export function useTeamManagement({ participants, auctionBids, auctionTarget, au
                 if (free === -1) { toast.error(`${tier}티어 자리가 가득 찼습니다.`); return false; }
                 slot_index = free;
             }
-            const { error } = await supabase.from('participants')
-                .update({ real_name, tier, avg_damage: parseInt(avg_damage), intro, slot_index })
-                .eq('p_token', p_token);
+            const patch: Record<string, unknown> = { tier, avg_damage: parseInt(avg_damage), intro, slot_index };
+            if (existing?.is_leader) patch.reveal_name = real_name; // 팀장은 공개명도 동기화
+            const { error } = await supabase.from('participants').update(patch).eq('p_token', p_token);
             if (error) { toast.error('저장 에러: ' + error.message); return false; }
+            const { error: sErr } = await supabase.from('participant_secrets').upsert({ p_token, real_name });
+            if (sErr) { toast.error('실명 저장 에러: ' + sErr.message); return false; }
             return true;
         }
 
-        // 신규: 선택 티어의 첫 빈 슬롯에 배치, 익명은 빈 값으로 시작
+        // 신규: 선택 티어의 첫 빈 슬롯에 배치, 익명은 빈 값으로 시작 (블라인드: reveal_name=null)
         const occupied = new Set(participants.filter((p) => p.slot_index != null).map((p) => p.slot_index as number));
         const free = firstFreeSlotInTier(tier, occupied);
         if (free === -1) { toast.error(`${tier}티어 자리가 가득 찼습니다.`); return false; }
 
+        const newToken = `p_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         const { error } = await supabase.from('participants').insert({
-            p_token: `p_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            p_token: newToken,
             slot_index: free,
             tier,
-            real_name,
             fake_name: '',
             avg_damage: parseInt(avg_damage),
             intro,
+            reveal_name: null,
         });
         if (error) { toast.error('저장 에러: ' + error.message); return false; }
+        const { error: sErr } = await supabase.from('participant_secrets').insert({ p_token: newToken, real_name });
+        if (sErr) { toast.error('실명 저장 에러: ' + sErr.message); return false; }
         return true;
     };
 
@@ -196,7 +201,7 @@ export function useTeamManagement({ participants, auctionBids, auctionTarget, au
         // 2) 팀 배정 해제 — 단, 팀장(is_leader)은 팀을 유지하고 경매로 채운 팀원만 초기화
         const { error: teamErr } = await supabase
             .from('participants')
-            .update({ team_name: null })
+            .update({ team_name: null, reveal_name: null })
             .eq('is_leader', false);
         if (teamErr) { toast.error('팀 배정 해제 실패: ' + teamErr.message); return false; }
 

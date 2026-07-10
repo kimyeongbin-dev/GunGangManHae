@@ -13,7 +13,7 @@ import type { Participant, Log } from '../types';
 
 type Props = {
     isAdmin: boolean;
-    showReal: boolean;
+    realNames?: Record<string, string>; // 진행자 실명모드에서만 전달
     participants: Participant[];
     auctionTarget: Participant | null;
     currentHighestBid: number;
@@ -32,7 +32,7 @@ type Props = {
 
 export default function AuctionPanel({
     isAdmin,
-    showReal,
+    realNames,
     participants,
     auctionTarget,
     currentHighestBid,
@@ -80,7 +80,7 @@ export default function AuctionPanel({
 
                 {auctionTarget ? (
                     <div className={styles.targetCard}>
-                        <h2>{participantLabel(auctionTarget, showReal)}</h2>
+                        <h2>{participantLabel(auctionTarget, realNames?.[auctionTarget.p_token])}</h2>
                         <p><strong>티어:</strong> {auctionTarget.tier}티어 | <strong>평균 딜량:</strong> {auctionTarget.avg_damage}</p>
                         <p className={styles.targetIntro}>&quot;{auctionTarget.intro}&quot;</p>
                     </div>

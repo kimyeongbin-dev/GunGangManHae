@@ -18,7 +18,7 @@ async function fetchLeaderPins(): Promise<Record<string, string>> {
     return map;
 }
 
-export default function DrawScreen({ isAdmin }: { isAdmin: boolean }) {
+export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean; revealNames: boolean }) {
     const { participants } = useRealtimeAuction();
     const leaders = participants.filter((p) => p.is_leader);
 
@@ -80,12 +80,13 @@ export default function DrawScreen({ isAdmin }: { isAdmin: boolean }) {
                                 {leader ? (
                                     <>
                                         <div className={`${fonts.teamCardName} ${styles.cardName}`}>
-                                            {leader.real_name} <span className={styles.leaderTag}>(팀장)</span>
+                                            {leader.reveal_name ?? leader.fake_name} <span className={styles.leaderTag}>(팀장)</span>
                                         </div>
                                         <span className={`${fonts.tierChip} ${styles.chip} ${styles[`chipTier${leader.tier}`]}`}>
                                             {leader.tier}티어
                                         </span>
-                                        {isAdmin && pins[teamName] && (
+                                        {/* PIN은 진행자가 '실명 보는 중'일 때만 노출 (익명 모드에선 참가자처럼 숨김) */}
+                                        {isAdmin && revealNames && pins[teamName] && (
                                             <div className={styles.pinBox}>PIN <b>{pins[teamName]}</b></div>
                                         )}
                                     </>

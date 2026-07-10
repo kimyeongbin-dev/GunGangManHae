@@ -9,13 +9,13 @@ import type { Participant } from '../types';
 type Props = {
     participants: Participant[];
     isAdmin: boolean;
-    showReal: boolean; // true면 실명(비제이명) 표시, false면 익명
+    realNames?: Record<string, string>; // 진행자 실명모드에서만 전달 → 실명 표시
     onCellClick: (slotIndex: number) => void;
     onEditParticipant: (participant: Participant, slotIndex: number) => void;
 };
 
-export default function UnassignedGrid({ participants, isAdmin, showReal, onCellClick, onEditParticipant }: Props) {
-    const nameOf = (p: Participant) => participantLabel(p, showReal);
+export default function UnassignedGrid({ participants, isAdmin, realNames, onCellClick, onEditParticipant }: Props) {
+    const nameOf = (p: Participant) => participantLabel(p, realNames?.[p.p_token]);
 
     return (
         <div className={styles.leftPanel}>

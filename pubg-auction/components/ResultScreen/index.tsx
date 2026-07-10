@@ -1,18 +1,32 @@
 // components/ResultScreen/index.tsx
 // [렌더링] 3단계 최종 팀 편성 결과 화면 (팀명 | 1~4티어 표)
+import { useEffect, useState } from 'react';
 import { useRealtimeAuction } from '../AuctionScreen/hooks/useRealtimeAuction';
 import { TEAM_COUNT } from '../AuctionScreen/types';
 import { participantLabel, teamLabel } from '../AuctionScreen/utils';
+import { supabase } from '@/lib/supabaseClient';
 import styles from './style.module.css';
 import type { Participant } from '../AuctionScreen/types';
 
 export default function ResultScreen() {
     const { participants } = useRealtimeAuction();
 
-    // 최종 결과이므로 실명(비제이명)을 공개
+    // 최종 결과 실명: page_state='result'일 때만 서버가 반환 (result_names RPC)
+    const [realNames, setRealNames] = useState<Record<string, string>>({});
+    useEffect(() => {
+        const load = async () => {
+            const { data } = await supabase.rpc('result_names');
+            const rows = (data ?? []) as { p_token: string; real_name: string }[];
+            const map: Record<string, string> = {};
+            rows.forEach((r) => { map[r.p_token] = r.real_name; });
+            setRealNames(map);
+        };
+        load();
+    }, []);
+
     const memberOf = (members: Participant[], tier: string) => {
         const m = members.find((p) => p.tier === tier);
-        return m ? participantLabel(m, true) : <span className={styles.empty}>공석</span>;
+        return m ? participantLabel(m, realNames[m.p_token]) : <span className={styles.empty}>공석</span>;
     };
 
     return (
@@ -34,7 +48,7 @@ export default function ResultScreen() {
                         const members = participants.filter((p) => p.team_name === teamName);
                         return (
                             <tr key={i}>
-                                <td className={`${styles.td} ${styles.teamName}`}>{teamLabel(teamName, participants)}</td>
+                                <td className={`${styles.td} ${styles.teamName}`}>{teamLabel(teamName, participants, realNames)}</td>
                                 <td className={styles.td}>{memberOf(members, '1')}</td>
                                 <td className={styles.td}>{memberOf(members, '2')}</td>
                                 <td className={styles.td}>{memberOf(members, '3')}</td>
