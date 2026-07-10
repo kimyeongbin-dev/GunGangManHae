@@ -16,6 +16,7 @@ import { useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast, confirmDialog } from '@/lib/toast';
 import { firstFreeSlotInTier } from '../utils';
+import { pickUnusedAnonName } from '../anonNames';
 import { IDLE_META, resetAuctionData } from '../auctionData';
 import { TEAM_COUNT } from '../types';
 import type { Participant, AuctionBid, ModalForm } from '../types';
@@ -99,15 +100,17 @@ export function useTeamManagement({ participants, auctionBids, auctionTarget, au
             return true;
         }
 
-        // [신규] 선택 티어의 첫 빈 슬롯에 배치. 익명(fake_name)은 빈 값으로 시작하고
-        //        reveal_name=null(블라인드). 익명은 이후 '익명 만들기'로 채운다.
+        // [신규] 선택 티어의 첫 빈 슬롯에 배치. reveal_name=null(블라인드).
+        //        익명(fake_name)은 기존에 쓰인 이름과 겹치지 않게 자동 생성(이후 '익명 만들기'로 일괄 재배정 가능).
         const occupied = new Set(participants.filter((p) => p.slot_index != null).map((p) => p.slot_index as number));
         const free = firstFreeSlotInTier(tier, occupied);
         if (free === -1) { toast.error(`${tier}티어 자리가 가득 찼습니다.`); return false; }
 
+        const usedNames = participants.map((p) => p.fake_name).filter((n): n is string => !!n);
+        const fakeName = pickUnusedAnonName(usedNames); // 현재 사용 중인 익명과 중복되지 않는 이름
         const newToken = `p_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
         const { error } = await supabase.from('participants').insert({
-            p_token: newToken, slot_index: free, tier, fake_name: '',
+            p_token: newToken, slot_index: free, tier, fake_name: fakeName,
             avg_damage: parseInt(avg_damage), intro, reveal_name: null,
         });
         if (error) { toast.error('저장 에러: ' + error.message); return false; }
