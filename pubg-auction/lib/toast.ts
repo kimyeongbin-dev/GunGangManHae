@@ -34,16 +34,23 @@ function armTimer(id: number, duration: number) {
 }
 
 // duration: ms. 0 이하이면 자동으로 사라지지 않고 클릭해야 닫힘.
+// 정책: 토스트는 "최신 하나만" 표시한다(나열하지 않고 교체). 새 토스트가 오면 기존 것을 대체.
 function pushToast(kind: ToastKind, message: string, duration = DEFAULT_TOAST_DURATION) {
-    // 동일한 토스트(종류+메시지)가 이미 떠 있으면 새로 쌓지 않고 표시 시간만 갱신
-    const existing = state.toasts.find((t) => t.kind === kind && t.message === message);
-    if (existing) {
-        if (duration > 0) armTimer(existing.id, duration);
+    // 지금 떠 있는 것과 완전히 같은 토스트면(종류+메시지) 다시 만들지 않고 표시 시간만 연장
+    const current = state.toasts[0];
+    if (current && current.kind === kind && current.message === message) {
+        if (duration > 0) armTimer(current.id, duration);
         return;
     }
 
+    // 그 외에는 기존 토스트(들)를 치우고 새 것으로 교체 → 화면엔 항상 하나만
+    state.toasts.forEach((t) => {
+        const tm = timers.get(t.id);
+        if (tm) { clearTimeout(tm); timers.delete(t.id); }
+    });
+
     const id = nextId++;
-    state = { ...state, toasts: [...state.toasts, { id, kind, message }] };
+    state = { ...state, toasts: [{ id, kind, message }] };
     emit();
     if (duration > 0) armTimer(id, duration);
 }
