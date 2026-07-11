@@ -1,10 +1,12 @@
 'use client';
 // app/page.tsx
 // ---------------------------------------------------------------------------
-// [SPA 루트] 3개 화면(추첨/경매/결과)을 전환하는 최상위 컴포넌트.
-//  · 화면 전환은 page_state 테이블로 "공유"된다 → 진행자가 바꾸면 모든 접속자가 실시간 동기화.
+// [SPA 루트] 화면(추첨/경매/스네이크/결과) 전환.
+//  · 추첨·경매·스네이크: 모든 접속자가 자기 nav로 자유 이동(로컬, 서로 독립).
+//  · 결과: 진행자만 이동 가능. 진행자가 결과로 넘기면 page_state='result'가 되어
+//      (1) 전원이 결과 화면으로 강제 전환되고 (2) 서버(result_names RPC)가 실명을 공개한다.
+//  · 즉 page_state(hostPage)는 진행자 전용 — '결과 공개 스위치' + 신규 접속 기본 화면 역할.
 //  · 진행자 인증은 Supabase Auth(이메일+비번). 로그인하면 isAdmin=true.
-//  · 헤더에서 진행자는 화면 전환·익명/실명 토글·익명 재생성을 제어한다.
 // 'use client'는 진입점인 여기만 있으면 되고, 하위 컴포넌트는 상속받는다.
 // ---------------------------------------------------------------------------
 import { useState, useEffect } from 'react';
@@ -14,26 +16,31 @@ import { toast, confirmDialog } from '@/lib/toast';
 import AuctionScreen from '@/components/AuctionScreen';
 import DrawScreen from '@/components/DrawScreen';
 import ResultScreen from '@/components/ResultScreen';
+import SnakeScreen from '@/components/SnakeScreen';
 import { regenerateAnonymous } from '@/components/AuctionScreen/anonActions';
 
-// 공유 화면 종류. page_state.current_page 와 동일한 값.
-type PageView = 'draw' | 'auction' | 'result';
+// 화면 종류. page_state.current_page 와 동일한 값.
+type PageView = 'draw' | 'auction' | 'snake' | 'result';
 
 // 진행자 계정 이메일 (비밀 아님, 아이디 역할). Supabase Auth 계정 및 SQL is_admin()과 반드시 일치.
 const ADMIN_EMAIL = 'admin@gungang.local';
 
 export default function MainApp() {
-  // currentView: 현재 보이는 화면. null = page_state 로드 전(초기 화면 반짝임 방지용 로딩 상태).
-  const [currentView, setCurrentView] = useState<PageView | null>(null);
+  // hostPage: page_state(공유). 진행자가 정하는 값 = 결과 공개 스위치 + 신규 접속 기본 화면. null=로딩.
+  const [hostPage, setHostPage] = useState<PageView | null>(null);
+  // localView: 비진행자의 로컬 이동 위치(추첨/경매/스네이크). 진행자에겐 쓰이지 않음.
+  const [localView, setLocalView] = useState<PageView>('auction');
   const [isAdmin, setIsAdmin] = useState(false);            // 진행자 세션 여부
   const [adminCode, setAdminCode] = useState('');           // 진행자 비밀번호 입력값
   const [revealNames, setRevealNames] = useState(false);    // 진행자 실명(비제이명) 공개 토글
 
-  // 공유 화면(page_state) 구독: 새 접속자는 현재 화면을 그대로 보고, 이후 변경도 실시간 반영.
+  // page_state 구독: 신규 접속 기본 화면 + 진행자의 '결과' 전환(전원 강제/실명 공개) 감지.
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('page_state').select('current_page').eq('id', 1).maybeSingle();
-      setCurrentView((data?.current_page as PageView) ?? 'auction');
+      const initial = (data?.current_page as PageView) ?? 'auction';
+      setHostPage(initial);
+      setLocalView(initial === 'result' ? 'auction' : initial); // 접속 시 진행자 위치로 착지(결과면 경매 기본)
     })();
 
     const channel = supabase
@@ -41,7 +48,7 @@ export default function MainApp() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_state' },
         (payload) => {
           const next = (payload.new as { current_page: PageView }).current_page;
-          if (next) setCurrentView(next); // DB 변경 감지 시 즉각 화면 전환
+          if (next) setHostPage(next); // 결과로 바뀌면 비진행자는 아래 view 계산으로 강제 전환됨
         }
       )
       .subscribe();
@@ -57,13 +64,27 @@ export default function MainApp() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // 진행자 화면 전환: page_state를 갱신하면 모든 접속자가 동기화된다.
-  // DB를 먼저 갱신한 뒤 로컬 전환 → 결과 화면의 result_names()가 page_state='result'를 확실히 보게 함.
+  // 실제 렌더 화면:
+  //  · 진행자 → 자기가 고른 화면(hostPage).
+  //  · 비진행자 → 진행자가 '결과'로 넘겼으면 강제로 결과, 아니면 자기 로컬 화면(localView).
+  const view: PageView | null =
+    hostPage === null ? null : isAdmin ? hostPage : hostPage === 'result' ? 'result' : localView;
+
+  // 진행자 화면 전환: page_state 갱신(신규 기본 화면 + 결과 공개 스위치).
+  // DB를 먼저 갱신한 뒤 로컬 반영 → 결과 화면의 result_names()가 page_state='result'를 확실히 보게 함.
+  // ★ 결과 전환은 전원 실명 공개(블라인드 종료)라 되돌릴 수 없으므로 실수 방지 확인을 받는다.
   const changePageAsAdmin = async (pageName: PageView) => {
+    if (
+      pageName === 'result' &&
+      hostPage !== 'result' &&
+      !(await confirmDialog('결과 화면으로 넘기면 전원에게 실명이 공개되고 블라인드가 종료됩니다.\n정말 결과를 공개하시겠습니까?'))
+    ) {
+      return;
+    }
     await supabase.from('page_state').update({ current_page: pageName }).eq('id', 1);
-    setCurrentView(pageName);
+    setHostPage(pageName);
   };
-  
+
   // 진행자 인증 로직 (Supabase Auth: 서버에서 비밀번호 검증 → JWT 발급)
   const handleAdminLogin = async () => {
     const { error } = await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password: adminCode });
@@ -87,22 +108,51 @@ export default function MainApp() {
 
   return (
     <div className={styles.container}>
-      {/* --- 상단 헤더 & 진행자 컨트롤 --- */}
+      {/* --- 상단 헤더 & 화면 전환 --- */}
       <header className={styles.header}>
         <h1 className={styles.title}>건강만해 블라인드 팀 뽑기</h1>
 
         <div className={styles.adminSection}>
           {!isAdmin ? (
-            <div className={styles.loginBox}>
-              <input
-                type="password"
-                placeholder="진행자 비밀번호"
-                value={adminCode}
-                onChange={(e) => setAdminCode(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAdminLogin(); }}
-                className={styles.input}
-              />
-              <button onClick={handleAdminLogin} className={styles.btn}>진행자 인증</button>
+            <div className={styles.navButtons}>
+              {/* 비진행자 자유 이동(결과는 진행자만). 진행자가 결과 발표 중이면 전원 결과로 고정. */}
+              {hostPage === 'result' ? (
+                <span className={styles.adminBadge}>진행자가 결과를 발표 중입니다</span>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setLocalView('draw')}
+                    className={`${styles.navBtn} ${view === 'draw' ? styles.active : ''}`}
+                  >
+                    1. 추첨
+                  </button>
+                  <button
+                    onClick={() => setLocalView('auction')}
+                    className={`${styles.navBtn} ${view === 'auction' ? styles.active : ''}`}
+                  >
+                    2. 경매
+                  </button>
+                  <button
+                    onClick={() => setLocalView('snake')}
+                    className={`${styles.navBtn} ${view === 'snake' ? styles.active : ''}`}
+                  >
+                    3. 스네이크
+                  </button>
+                </>
+              )}
+
+              {/* 진행자 로그인 */}
+              <div className={styles.loginBox}>
+                <input
+                  type="password"
+                  placeholder="진행자 비밀번호"
+                  value={adminCode}
+                  onChange={(e) => setAdminCode(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAdminLogin(); }}
+                  className={styles.input}
+                />
+                <button onClick={handleAdminLogin} className={styles.btn}>진행자 인증</button>
+              </div>
             </div>
           ) : (
             <div className={styles.navButtons}>
@@ -121,24 +171,30 @@ export default function MainApp() {
                 익명 만들기
               </button>
 
-              {/* 화면 전환 버튼들 (진행자가 누르면 전원 동기화) */}
+              {/* 화면 전환 (진행자). 결과로 넘기면 전원 강제 전환 + 실명 공개. */}
               <button
                 onClick={() => changePageAsAdmin('draw')}
-                className={`${styles.navBtn} ${currentView === 'draw' ? styles.active : ''}`}
+                className={`${styles.navBtn} ${hostPage === 'draw' ? styles.active : ''}`}
               >
                 1. 추첨
               </button>
               <button
                 onClick={() => changePageAsAdmin('auction')}
-                className={`${styles.navBtn} ${currentView === 'auction' ? styles.active : ''}`}
+                className={`${styles.navBtn} ${hostPage === 'auction' ? styles.active : ''}`}
               >
                 2. 경매
               </button>
               <button
-                onClick={() => changePageAsAdmin('result')}
-                className={`${styles.navBtn} ${currentView === 'result' ? styles.active : ''}`}
+                onClick={() => changePageAsAdmin('snake')}
+                className={`${styles.navBtn} ${hostPage === 'snake' ? styles.active : ''}`}
               >
-                3. 결과
+                3. 스네이크
+              </button>
+              <button
+                onClick={() => changePageAsAdmin('result')}
+                className={`${styles.navBtn} ${hostPage === 'result' ? styles.active : ''}`}
+              >
+                4. 결과
               </button>
 
               {/* 모드 해제 버튼 */}
@@ -152,13 +208,14 @@ export default function MainApp() {
 
       {/* --- 메인 콘텐츠 (SPA 화면 전환 영역) --- */}
       <main className={styles.mainContent}>
-        {currentView === null ? (
+        {view === null ? (
           <div className={styles.loading}>불러오는 중…</div>
         ) : (
           <>
-            {currentView === 'draw' && <DrawScreen isAdmin={isAdmin} revealNames={revealNames} />}
-            {currentView === 'auction' && <AuctionScreen isAdmin={isAdmin} revealNames={revealNames} />}
-            {currentView === 'result' && <ResultScreen />}
+            {view === 'draw' && <DrawScreen isAdmin={isAdmin} revealNames={revealNames} />}
+            {view === 'auction' && <AuctionScreen isAdmin={isAdmin} revealNames={revealNames} />}
+            {view === 'snake' && <SnakeScreen isAdmin={isAdmin} revealNames={revealNames} />}
+            {view === 'result' && <ResultScreen />}
           </>
         )}
       </main>
