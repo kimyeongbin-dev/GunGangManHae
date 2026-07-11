@@ -33,6 +33,8 @@ export default function ParticipantEditModal({ initialForm, masked, onSave, onDe
         <div className={styles.modal} onClick={onClose}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                 <h3>{form.p_token ? '참가자 수정' : '참가자 등록'}</h3>
+                {/* 비밀번호 타입 입력(비제이명 마스킹)이 form 밖에 있으면 크롬이 경고 → form으로 감싼다. */}
+                <form onSubmit={(e) => e.preventDefault()}>
                 <div className={styles.formGroup}>
                     <label className={`${fonts.formLabel} ${styles.editLabel}`}>비제이명</label>
                     <div className={styles.nameFieldRow}>
@@ -73,6 +75,7 @@ export default function ParticipantEditModal({ initialForm, masked, onSave, onDe
                         onChange={(e) => setForm({ ...form, intro: e.target.value })}
                     />
                 </div>
+                </form>
 
                 <div className={styles.modalButtons}>
                     <button onClick={handleSave} className={styles.saveBtn}>저장</button>
