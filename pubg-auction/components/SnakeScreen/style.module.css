@@ -132,6 +132,9 @@
 .pickable:hover {
     background: #2f2f2f;
 }
+.viewable {
+    cursor: pointer;
+}
 .taken {
     opacity: 0.4;
 }

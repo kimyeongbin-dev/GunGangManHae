@@ -63,6 +63,12 @@
     background: #1e1e1e;
     border-radius: 8px;
 }
+.clickable {
+    cursor: pointer;
+}
+.clickable:hover {
+    border-color: #ff9800;
+}
 .cardLabel {
     color: #777;
     margin-bottom: var(--space-2);

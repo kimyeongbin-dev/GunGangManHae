@@ -28,6 +28,7 @@ import fonts from '../typography.module.css';
 import styles from './style.module.css';
 import { ALL_TIERS, remainingTiers, buildSnakeSequence, currentPick, memberAt } from './snakeOrder';
 import { assignSnakePick, cancelSnakePick, resetSnakeTier } from './snakeActions';
+import ParticipantDetailModal from '../AuctionScreen/ui/ParticipantDetailModal';
 import type { Participant } from '../AuctionScreen/types';
 
 export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean; revealNames: boolean }) {
@@ -40,6 +41,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
     // 낙관적 배정 오버레이 { p_token: team_name | null }. null = 방금 취소(미배정 강제).
     // 실시간 수신 전 화면에 먼저 반영하고, 서버가 따라잡으면 아래 effect가 비운다.
     const [optimistic, setOptimistic] = useState<Record<string, string | null>>({});
+    const [viewingToken, setViewingToken] = useState<string | null>(null); // 상세 팝업 대상(그리드 셀 클릭)
     const lockRef = useRef(false); // 등록/취소 직렬화(동기 잠금)
 
     // 서버 실측이 낙관값을 반영하면 해당 항목 제거(안 그러면 취소가 안 먹는 등 stale 발생).
@@ -62,6 +64,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
     const merged = participants.map((p) =>
         p.p_token in optimistic ? { ...p, team_name: optimistic[p.p_token] } : p,
     );
+    const viewingTarget = merged.find((p) => p.p_token === viewingToken) ?? null;
 
     // 팀장 티어 판별. 스네이크는 '한 티어 전체가 팀장'인 구성만 유효하다.
     //  · 팀장 0명 → 아직 추첨 전(스켈레톤) / 1개 티어 → 정상 / 2개 이상 티어(경매 구성) → 안내만.
@@ -70,6 +73,10 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
     const mixedLeaders = leaderTierSet.size > 1; // 경매 등 여러 티어에 걸친 팀장 → 스네이크로 표시 불가
     const sequence = leaderTier ? buildSnakeSequence(leaderTier) : [];
     const current = leaderTier ? currentPick(sequence, merged) : null;
+
+    // 상세 팝업의 '지명' 가능 여부(진행자 · 현재 차례 티어 · 미배정 · 팀장 아님).
+    const canPickViewing =
+        isAdmin && !!current && !!viewingTarget && !viewingTarget.team_name && !viewingTarget.is_leader && viewingTarget.tier === current.tier;
 
     // 진행 현황(팀장 제외 픽 수 / 남은 티어 × 팀 수).
     const pickedCount = merged.filter((p) => p.team_name && !p.is_leader).length;
@@ -113,6 +120,14 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
         await resetSnakeTier(tier);
     };
 
+    // [진행자] 상세 팝업의 '지명' → 현재 차례 팀에 배정하고 팝업 닫기(그리드 직접 클릭 대신 2단계로 실수 방지).
+    const handlePickFromModal = async () => {
+        if (!viewingTarget) return;
+        const p = viewingTarget;
+        setViewingToken(null);
+        await handlePick(p);
+    };
+
     return (
         <div className={styles.wrap}>
             <div className={styles.header}>
@@ -149,13 +164,13 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                                     styles.cell,
                                     styles[`cellTier${gridTier}`],
                                     available ? '' : styles.taken,
-                                    pickable ? styles.pickable : '',
+                                    pickable ? styles.pickable : styles.viewable, // 지명 불가 셀은 클릭 시 상세 보기
                                 ].filter(Boolean).join(' ');
                                 return (
                                     <div
                                         key={p.p_token}
                                         className={cellClass}
-                                        onClick={pickable ? () => handlePick(p) : undefined}
+                                        onClick={() => setViewingToken(p.p_token)}
                                         title={available ? '' : `${nameOf(p)} → ${p.team_name}`}
                                     >
                                         <span className={styles.cellName}>{nameOf(p)}</span>
@@ -263,6 +278,21 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                     </table>
                 </div>
             </div>
+            )}
+
+            {/* 참가자 상세 팝업 (읽기 전용). 그리드 셀 클릭으로 진행자·비진행자 모두 열람. */}
+            {viewingTarget && (
+                <ParticipantDetailModal
+                    target={viewingTarget}
+                    isAdmin={false}
+                    realName={displayNames?.[viewingTarget.p_token]}
+                    auctionRunning={false}
+                    finalPrice={0}
+                    onClose={() => setViewingToken(null)}
+                    onAssignTarget={() => {}}
+                    onRevertWin={() => {}}
+                    snakePick={canPickViewing && current ? { label: `${current.team}에 지명`, onPick: handlePickFromModal } : undefined}
+                />
             )}
         </div>
     );

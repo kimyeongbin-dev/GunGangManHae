@@ -12,6 +12,8 @@ import fonts from '../typography.module.css';
 import styles from './style.module.css';
 import { drawLeaders, releaseLeaders } from './drawActions';
 import { drawSnakeLeaders } from '../SnakeScreen/snakeActions';
+import { useAdminNames } from '../AuctionScreen/hooks/useAdminNames';
+import ParticipantDetailModal from '../AuctionScreen/ui/ParticipantDetailModal';
 
 export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean; revealNames: boolean }) {
     // 실시간 참가자 목록에서 팀장(is_leader)만 추린다.
@@ -28,6 +30,12 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
         };
         load();
     }, [isAdmin, leaders.length]);
+
+    // 진행자 실명모드에서만 실명 표시. 카드 클릭 시 상세(소개글 등) 팝업을 띄운다(읽기 전용).
+    const adminNames = useAdminNames(isAdmin, participants.length);
+    const displayNames = isAdmin && revealNames ? adminNames : undefined;
+    const [viewingToken, setViewingToken] = useState<string | null>(null);
+    const viewingTarget = participants.find((p) => p.p_token === viewingToken) ?? null;
 
     // 재추첨: 기존 구성이 있으면 초기화 경고 → drawLeaders → PIN 다시 로드.
     const handleDraw = async () => {
@@ -84,7 +92,11 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
                         const teamName = `${i + 1}팀`;
                         const leader = leaders.find((p) => p.team_name === teamName);
                         return (
-                            <div key={i} className={styles.card}>
+                            <div
+                                key={i}
+                                className={`${styles.card} ${leader ? styles.clickable : ''}`}
+                                onClick={leader ? () => setViewingToken(leader.p_token) : undefined}
+                            >
                                 <div className={`${fonts.teamCardLabel} ${styles.cardLabel}`}>{teamName}</div>
                                 {leader ? (
                                     <>
@@ -108,6 +120,20 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
                         );
                     })}
                 </div>
+            )}
+
+            {/* 팀장 상세 정보 팝업 (읽기 전용: 소개글 등) */}
+            {viewingTarget && (
+                <ParticipantDetailModal
+                    target={viewingTarget}
+                    isAdmin={false}
+                    realName={displayNames?.[viewingTarget.p_token]}
+                    auctionRunning={false}
+                    finalPrice={0}
+                    onClose={() => setViewingToken(null)}
+                    onAssignTarget={() => {}}
+                    onRevertWin={() => {}}
+                />
             )}
         </div>
     );

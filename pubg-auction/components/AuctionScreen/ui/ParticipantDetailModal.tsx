@@ -16,9 +16,10 @@ type Props = {
     onClose: () => void;
     onAssignTarget: (target: Participant) => void;
     onRevertWin: (target: Participant) => void;
+    snakePick?: { label: string; onPick: () => void }; // 스네이크 화면 전용: '지명' 버튼(전달 시에만 노출)
 };
 
-export default function ParticipantDetailModal({ target, isAdmin, realName, auctionRunning, finalPrice, onClose, onAssignTarget, onRevertWin }: Props) {
+export default function ParticipantDetailModal({ target, isAdmin, realName, auctionRunning, finalPrice, onClose, onAssignTarget, onRevertWin, snakePick }: Props) {
     return (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.detailModalContent} onClick={(e) => e.stopPropagation()}>
@@ -47,7 +48,8 @@ export default function ParticipantDetailModal({ target, isAdmin, realName, auct
                         <span className={`${styles.statBadge} ${styles.badgeLeader}`}>
                             팀장
                         </span>
-                    ) : target.team_name ? (
+                    ) : target.team_name && finalPrice > 0 ? (
+                        // 낙찰가는 실제 입찰(경매)이 있을 때만. 스네이크 픽은 입찰이 없어 표시하지 않음.
                         <span className={`${styles.statBadge} ${styles.badgeWin}`}>
                             낙찰가: {finalPrice}P
                         </span>
@@ -90,6 +92,13 @@ export default function ParticipantDetailModal({ target, isAdmin, realName, auct
                             경매 대상 지정
                         </button>
                     )
+                )}
+
+                {/* 스네이크 화면 전용: 상세에서 '지명' (전달 시에만 노출) */}
+                {snakePick && (
+                    <button onClick={snakePick.onPick} className={`${fonts.detailActionBtn} ${styles.detailBtn} ${styles.detailBtnAssign}`}>
+                        {snakePick.label}
+                    </button>
                 )}
             </div>
         </div>
