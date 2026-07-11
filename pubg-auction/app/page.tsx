@@ -1,15 +1,15 @@
 'use client';
 // app/page.tsx
 // ---------------------------------------------------------------------------
-// [SPA 루트] 화면(추첨/경매/스네이크/결과) 전환.
-//  · 추첨·경매·스네이크: 모든 접속자가 자기 nav로 자유 이동(로컬, 서로 독립).
+// [SPA 루트] 화면(참가자/추첨/경매/스네이크/결과) 전환.
+//  · 참가자·추첨·경매·스네이크: 모든 접속자가 자기 nav로 자유 이동(로컬, 서로 독립).
 //  · 결과: 진행자만 이동 가능. 진행자가 결과로 넘기면 page_state='result'가 되어
 //      (1) 전원이 결과 화면으로 강제 전환되고 (2) 서버(result_names RPC)가 실명을 공개한다.
 //  · 즉 page_state(hostPage)는 진행자 전용 — '결과 공개 스위치' + 신규 접속 기본 화면 역할.
-//  · 진행자 인증은 Supabase Auth(이메일+비번). 로그인하면 isAdmin=true.
-// 'use client'는 진입점인 여기만 있으면 되고, 하위 컴포넌트는 상속받는다.
+//  · 진행자 인증은 Supabase Auth(이메일+비번). 로그인하면 isAdmin=true(단, 실제 권한은 서버 RLS가 검증).
+//  · 광클 방지: 루트 캡처 단계에서 버튼별 300ms 쓰로틀(모든 버튼 공통).
 // ---------------------------------------------------------------------------
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, type MouseEvent } from 'react';
 import styles from './page.module.css';
 import { supabase } from '@/lib/supabaseClient';
 import { toast, confirmDialog } from '@/lib/toast';
@@ -17,10 +17,11 @@ import AuctionScreen from '@/components/AuctionScreen';
 import DrawScreen from '@/components/DrawScreen';
 import ResultScreen from '@/components/ResultScreen';
 import SnakeScreen from '@/components/SnakeScreen';
+import ParticipantsScreen from '@/components/ParticipantsScreen';
 import { regenerateAnonymous } from '@/components/AuctionScreen/anonActions';
 
-// 화면 종류. page_state.current_page 와 동일한 값.
-type PageView = 'draw' | 'auction' | 'snake' | 'result';
+// 화면 종류. page_state.current_page 와 동일한 값('participants'는 로컬 브라우즈용이라 결과 게이팅과 무관).
+type PageView = 'participants' | 'draw' | 'auction' | 'snake' | 'result';
 
 // 진행자 계정 이메일 (비밀 아님, 아이디 역할). Supabase Auth 계정 및 SQL is_admin()과 반드시 일치.
 const ADMIN_EMAIL = 'admin@gungang.local';
@@ -28,9 +29,9 @@ const ADMIN_EMAIL = 'admin@gungang.local';
 export default function MainApp() {
   // hostPage: page_state(공유). 진행자가 정하는 값 = 결과 공개 스위치 + 신규 접속 기본 화면. null=로딩.
   const [hostPage, setHostPage] = useState<PageView | null>(null);
-  // localView: 비진행자의 로컬 이동 위치(추첨/경매/스네이크). 진행자에겐 쓰이지 않음.
+  // localView: 비진행자의 로컬 이동 위치(참가자/추첨/경매/스네이크). 진행자에겐 쓰이지 않음.
   const [localView, setLocalView] = useState<PageView>('auction');
-  const [isAdmin, setIsAdmin] = useState(false);            // 진행자 세션 여부
+  const [isAdmin, setIsAdmin] = useState(false);            // 진행자 세션 여부(UI용, 실제 권한은 서버 검증)
   const [adminCode, setAdminCode] = useState('');           // 진행자 비밀번호 입력값
   const [revealNames, setRevealNames] = useState(false);    // 진행자 실명(비제이명) 공개 토글
 
@@ -63,6 +64,34 @@ export default function MainApp() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => apply(session?.user.email ?? undefined));
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // 광클(1초에 수십 번) 방지: 같은 버튼은 300ms에 한 번만 실행되도록 캡처 단계에서 쓰로틀.
+  // 모든 버튼이 공통으로 스팸 클릭에 안전해진다(개별 무거운 동작은 아래처럼 실행 중 재실행까지 별도로 막음).
+  const clickTimesRef = useRef(new WeakMap<Element, number>());
+  const throttleRapidClicks = (e: MouseEvent<HTMLDivElement>) => {
+    const btn = (e.target as HTMLElement).closest('button');
+    if (!btn) return;
+    const now = Date.now();
+    if (now - (clickTimesRef.current.get(btn) ?? 0) < 300) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    clickTimesRef.current.set(btn, now);
+  };
+
+  // '익명 만들기'는 64명 슬롯 재배정이라 동시 실행 시 슬롯이 겹쳐 참가자가 사라진다.
+  // 실행 중 버튼을 비활성화해 재클릭을 막는다(원천 차단은 regenerateAnonymous 내부 모듈 잠금이 담당).
+  const [anonBusy, setAnonBusy] = useState(false);
+  const handleRegenAnon = async () => {
+    if (anonBusy) return;
+    setAnonBusy(true);
+    try {
+      await regenerateAnonymous();
+    } finally {
+      setAnonBusy(false);
+    }
+  };
 
   // 실제 렌더 화면:
   //  · 진행자 → 자기가 고른 화면(hostPage).
@@ -107,7 +136,7 @@ export default function MainApp() {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} onClickCapture={throttleRapidClicks}>
       {/* --- 상단 헤더 & 화면 전환 --- */}
       <header className={styles.header}>
         <h1 className={styles.title}>건강만해 블라인드 팀 뽑기</h1>
@@ -120,6 +149,12 @@ export default function MainApp() {
                 <span className={styles.adminBadge}>진행자가 결과를 발표 중입니다</span>
               ) : (
                 <>
+                  <button
+                    onClick={() => setLocalView('participants')}
+                    className={`${styles.navBtn} ${view === 'participants' ? styles.active : ''}`}
+                  >
+                    참가자
+                  </button>
                   <button
                     onClick={() => setLocalView('draw')}
                     className={`${styles.navBtn} ${view === 'draw' ? styles.active : ''}`}
@@ -167,11 +202,17 @@ export default function MainApp() {
               >
                 {revealNames ? '실명 보는 중' : '익명 보는 중'}
               </button>
-              <button onClick={regenerateAnonymous} className={styles.anonBtn}>
-                익명 만들기
+              <button onClick={handleRegenAnon} disabled={anonBusy} className={styles.anonBtn}>
+                {anonBusy ? '생성 중…' : '익명 만들기'}
               </button>
 
               {/* 화면 전환 (진행자). 결과로 넘기면 전원 강제 전환 + 실명 공개. */}
+              <button
+                onClick={() => changePageAsAdmin('participants')}
+                className={`${styles.navBtn} ${hostPage === 'participants' ? styles.active : ''}`}
+              >
+                참가자
+              </button>
               <button
                 onClick={() => changePageAsAdmin('draw')}
                 className={`${styles.navBtn} ${hostPage === 'draw' ? styles.active : ''}`}
@@ -212,6 +253,7 @@ export default function MainApp() {
           <div className={styles.loading}>불러오는 중…</div>
         ) : (
           <>
+            {view === 'participants' && <ParticipantsScreen isAdmin={isAdmin} revealNames={revealNames} />}
             {view === 'draw' && <DrawScreen isAdmin={isAdmin} revealNames={revealNames} />}
             {view === 'auction' && <AuctionScreen isAdmin={isAdmin} revealNames={revealNames} />}
             {view === 'snake' && <SnakeScreen isAdmin={isAdmin} revealNames={revealNames} />}

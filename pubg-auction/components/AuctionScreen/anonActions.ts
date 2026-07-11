@@ -40,13 +40,23 @@ export async function reassignAnonymous(participants: Participant[]): Promise<bo
 
 // [진행자] 헤더 '익명 만들기' 버튼 핸들러: 전 참가자를 조회해 재배정하고 결과를 토스트로 안내.
 // 호출: page.tsx 헤더의 onClick.
+// ★ 동시 실행 방지(모듈 레벨 잠금): 광클로 이 함수가 겹쳐 돌면 64명 슬롯 재배정이 충돌해
+//    slot_index가 중복되고, 그리드가 슬롯 기준으로 그려지므로 일부 참가자가 사라진다.
+//    실행 중 재호출은 조용히 무시한다(버튼 비활성화와 이중 안전장치).
+let regenerating = false;
 export async function regenerateAnonymous() {
-    const { data, error } = await supabase.from('participants').select('*');
-    if (error) { toast.error('참가자 조회 실패: ' + error.message); return; }
-    const participants = (data ?? []) as Participant[];
-    if (participants.length === 0) { toast.error('등록된 참가자가 없습니다.'); return; }
+    if (regenerating) return;
+    regenerating = true;
+    try {
+        const { data, error } = await supabase.from('participants').select('*');
+        if (error) { toast.error('참가자 조회 실패: ' + error.message); return; }
+        const participants = (data ?? []) as Participant[];
+        if (participants.length === 0) { toast.error('등록된 참가자가 없습니다.'); return; }
 
-    const ok = await reassignAnonymous(participants);
-    if (!ok) { toast.error('익명 생성 중 오류가 발생했습니다.'); return; }
-    toast.success('익명이 생성되었습니다.');
+        const ok = await reassignAnonymous(participants);
+        if (!ok) { toast.error('익명 생성 중 오류가 발생했습니다.'); return; }
+        toast.success('익명이 생성되었습니다.');
+    } finally {
+        regenerating = false;
+    }
 }
