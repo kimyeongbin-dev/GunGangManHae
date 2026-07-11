@@ -206,6 +206,12 @@
 .pickName {
     color: #eee;
 }
+.nameLink {
+    cursor: pointer;
+}
+.nameLink:hover {
+    text-decoration: underline;
+}
 .cancelBtn {
     top: 50%;
     color: #e57373;

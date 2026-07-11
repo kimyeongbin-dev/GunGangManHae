@@ -240,7 +240,9 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                                                 const leader = merged.find((p) => p.is_leader && p.team_name === teamName);
                                                 return (
                                                     <td key={tier} className={`${styles.td} ${styles.leaderCell}`}>
-                                                        {leader ? nameOf(leader) : ''}
+                                                        {leader ? (
+                                                            <span className={styles.nameLink} onClick={() => setViewingToken(leader.p_token)}>{nameOf(leader)}</span>
+                                                        ) : ''}
                                                     </td>
                                                 );
                                             }
@@ -251,7 +253,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                                                 <td key={tier} className={`${styles.td} ${isTurn ? styles.turnCell : ''}`}>
                                                     {member ? (
                                                         <>
-                                                            <span className={styles.pickName}>{nameOf(member)}</span>
+                                                            <span className={`${styles.pickName} ${styles.nameLink}`} onClick={() => setViewingToken(member.p_token)}>{nameOf(member)}</span>
                                                             {isAdmin && (
                                                                 <button
                                                                     onClick={() => handleCancel(member)}
