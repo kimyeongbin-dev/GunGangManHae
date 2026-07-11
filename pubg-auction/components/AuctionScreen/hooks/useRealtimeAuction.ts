@@ -24,14 +24,22 @@ export function useRealtimeAuction() {
 
         fetchInitialData();
 
+        // 대량 변경(익명 재배정 64건·추첨 등)이 실시간 이벤트를 폭발시키면 refetch가 폭주해
+        // net::ERR_INSUFFICIENT_RESOURCES가 난다 → 짧게 디바운스해 변경 버스트를 한 번의 refetch로 합친다.
+        let refetchTimer: ReturnType<typeof setTimeout> | null = null;
+        const scheduleRefetch = () => {
+            if (refetchTimer) clearTimeout(refetchTimer);
+            refetchTimer = setTimeout(fetchInitialData, 250);
+        };
+
         // 1. 참가자 데이터 구독
         const pSub = supabase.channel('participants_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, fetchInitialData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, scheduleRefetch)
             .subscribe();
 
         // 2. 입찰 데이터 구독 (입찰 추가 + 전체 초기화 삭제 모두 반영)
         const bSub = supabase.channel('bids_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'auction_bids' }, fetchInitialData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'auction_bids' }, scheduleRefetch)
             .subscribe();
 
         // 3. 로그 데이터 구독 (신규 로그는 상단 추가, 전체 삭제는 비움)
@@ -52,6 +60,7 @@ export function useRealtimeAuction() {
             .subscribe();
 
         return () => {
+            if (refetchTimer) clearTimeout(refetchTimer);
             supabase.removeChannel(pSub);
             supabase.removeChannel(bSub);
             supabase.removeChannel(lSub);

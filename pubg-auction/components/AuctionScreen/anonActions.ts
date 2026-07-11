@@ -29,13 +29,25 @@ export async function reassignAnonymous(participants: Participant[]): Promise<bo
         });
     }
 
-    // 참가자별로 fake_name·slot_index만 갱신 (실명·티어 등은 건드리지 않음)
-    const results = await Promise.all(
-        updates.map((u) =>
-            supabase.from('participants').update({ fake_name: u.fake_name, slot_index: u.slot_index }).eq('p_token', u.p_token),
-        ),
-    );
-    return !results.find((r) => r.error);
+    // 참가자별로 fake_name·slot_index만 갱신 (실명·팀·티어 등은 건드리지 않음).
+    // ★ 64건을 한꺼번에 병렬 PATCH하면 브라우저 동시 요청이 폭주해 net::ERR_INSUFFICIENT_RESOURCES가 나고
+    //    일부 요청이 실패 → 그 참가자들의 slot_index가 안 바뀌어 그리드에서 겹치거나 사라진다.
+    //    그래서 소량(CHUNK)씩 나눠 보내 동시 요청 수를 제한한다.
+    const CHUNK = 8;
+    for (let i = 0; i < updates.length; i += CHUNK) {
+        const results = await Promise.all(
+            updates.slice(i, i + CHUNK).map((u) =>
+                supabase.from('participants').update({ fake_name: u.fake_name, slot_index: u.slot_index }).eq('p_token', u.p_token),
+            ),
+        );
+        const firstErr = results.find((r) => r.error)?.error;
+        if (firstErr) {
+            // 실제 원인을 콘솔에 남긴다(일반 토스트만으로는 진단 불가). 네트워크 폭주면 여기서 드러남.
+            console.error('[익명 재배정] 업데이트 실패:', firstErr);
+            return false;
+        }
+    }
+    return true;
 }
 
 // [진행자] 헤더 '익명 만들기' 버튼 핸들러: 전 참가자를 조회해 재배정하고 결과를 토스트로 안내.
