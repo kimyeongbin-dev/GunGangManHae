@@ -16,6 +16,11 @@
 .count {
     color: #aaa;
 }
+.notice {
+    color: #aaa;
+    padding: 3.75rem var(--space-5); /* 3.75rem = 60px */
+    text-align: center;
+}
 
 /* 3단 레이아웃: 좌(4x4 티어 그리드) · 가운데(버튼) · 우(편성표).
    좌·우를 같은 높이로 늘리고(stretch), 표가 그 높이를 채우게 해 표 높이 = 그리드 높이. */

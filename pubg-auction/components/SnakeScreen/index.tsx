@@ -26,7 +26,7 @@ import { participantLabel, teamLabel } from '../AuctionScreen/utils';
 import { confirmDialog } from '@/lib/toast';
 import fonts from '../typography.module.css';
 import styles from './style.module.css';
-import { ALL_TIERS, leaderTierOf, remainingTiers, buildSnakeSequence, currentPick, memberAt } from './snakeOrder';
+import { ALL_TIERS, remainingTiers, buildSnakeSequence, currentPick, memberAt } from './snakeOrder';
 import { assignSnakePick, cancelSnakePick, resetSnakeTier } from './snakeActions';
 import type { Participant } from '../AuctionScreen/types';
 
@@ -63,8 +63,11 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
         p.p_token in optimistic ? { ...p, team_name: optimistic[p.p_token] } : p,
     );
 
-    // 팀장 티어(is_leader 참가자의 티어). null이면 아직 팀장 추첨 전.
-    const leaderTier = leaderTierOf(merged);
+    // 팀장 티어 판별. 스네이크는 '한 티어 전체가 팀장'인 구성만 유효하다.
+    //  · 팀장 0명 → 아직 추첨 전(스켈레톤) / 1개 티어 → 정상 / 2개 이상 티어(경매 구성) → 안내만.
+    const leaderTierSet = new Set(merged.filter((p) => p.is_leader).map((p) => p.tier));
+    const leaderTier = leaderTierSet.size === 1 ? [...leaderTierSet][0] : null;
+    const mixedLeaders = leaderTierSet.size > 1; // 경매 등 여러 티어에 걸친 팀장 → 스네이크로 표시 불가
     const sequence = leaderTier ? buildSnakeSequence(leaderTier) : [];
     const current = leaderTier ? currentPick(sequence, merged) : null;
 
@@ -119,6 +122,12 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                 </h2>
             </div>
 
+            {mixedLeaders ? (
+                <div className={styles.notice}>
+                    현재 팀장이 경매 방식(여러 티어)으로 구성돼 있어 스네이크 편성을 표시할 수 없습니다.
+                    {isAdmin ? ' 스네이크로 진행하려면 “1. 추첨”에서 “스네이크 팀장 추첨”을 눌러 주세요.' : ''}
+                </div>
+            ) : (
             <div className={styles.body}>
                 {/* 좌측: 현재 차례 티어 16명(4x4). 팀장 추첨 전엔 ? 스켈레톤. */}
                 <div className={styles.leftPanel}>
@@ -254,6 +263,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                     </table>
                 </div>
             </div>
+            )}
         </div>
     );
 }
