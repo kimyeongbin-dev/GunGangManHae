@@ -9,7 +9,7 @@
 //  · 진행자 인증은 Supabase Auth(이메일+비번). 로그인하면 isAdmin=true(단, 실제 권한은 서버 RLS가 검증).
 //  · 광클 방지: 루트 캡처 단계에서 버튼별 300ms 쓰로틀(모든 버튼 공통).
 // ---------------------------------------------------------------------------
-import { useState, useEffect, useRef, type MouseEvent } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './page.module.css';
 import { supabase } from '@/lib/supabaseClient';
 import { toast, confirmDialog } from '@/lib/toast';
@@ -65,20 +65,28 @@ export default function MainApp() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // 광클(1초에 수십 번) 방지: 같은 버튼은 300ms에 한 번만 실행되도록 캡처 단계에서 쓰로틀.
-  // 모든 버튼이 공통으로 스팸 클릭에 안전해진다(개별 무거운 동작은 아래처럼 실행 중 재실행까지 별도로 막음).
-  const clickTimesRef = useRef(new WeakMap<Element, number>());
-  const throttleRapidClicks = (e: MouseEvent<HTMLDivElement>) => {
-    const btn = (e.target as HTMLElement).closest('button');
-    if (!btn) return;
-    const now = Date.now();
-    if (now - (clickTimesRef.current.get(btn) ?? 0) < 300) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    clickTimesRef.current.set(btn, now);
-  };
+  // 광클(1초에 수십 번) 방지: 같은 버튼의 연속 클릭을 600ms 쓰로틀한다.
+  // ★ React onClickCapture의 stopPropagation()으로는 onClick이 확실히 안 막힌다(경매 시작 중복 발생).
+  //   또 Next(app router)는 document에 React를 하이드레이트해 이벤트가 document에 붙으므로, document에 뒤늦게
+  //   붙인 리스너는 React보다 늦게 실행된다. → 캡처 경로상 더 위인 window에 붙여 React 디스패치보다 먼저
+  //   stopImmediatePropagation으로 차단한다.
+  useEffect(() => {
+    const times = new WeakMap<Element, number>();
+    const onClick = (e: Event) => {
+      const btn = (e.target as HTMLElement)?.closest?.('button');
+      if (!btn || (btn as HTMLButtonElement).disabled) return;
+      const now = Date.now();
+      if (now - (times.get(btn) ?? 0) < 600) {
+        e.stopImmediatePropagation(); // window 캡처에서 멈춤 → document(React)까지 도달 안 함 → onClick 미발생
+        e.preventDefault();
+        console.debug('[광클차단] 600ms 내 같은 버튼 재클릭 무시');
+        return;
+      }
+      times.set(btn, now);
+    };
+    window.addEventListener('click', onClick, true); // window 캡처 = document(React)보다 먼저
+    return () => window.removeEventListener('click', onClick, true);
+  }, []);
 
   // '익명 만들기'는 64명 슬롯 재배정이라 동시 실행 시 슬롯이 겹쳐 참가자가 사라진다.
   // 실행 중 버튼을 비활성화해 재클릭을 막는다(원천 차단은 regenerateAnonymous 내부 모듈 잠금이 담당).
@@ -136,7 +144,7 @@ export default function MainApp() {
   };
 
   return (
-    <div className={styles.container} onClickCapture={throttleRapidClicks}>
+    <div className={styles.container}>
       {/* --- 상단 헤더 & 화면 전환 --- */}
       <header className={styles.header}>
         <h1 className={styles.title}>건강만해 블라인드 팀 뽑기</h1>

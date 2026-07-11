@@ -121,15 +121,23 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
     };
 
     // 경매 시작 / 재시작. 진행 중이면 현재 회차 입찰 초기화 후 타이머 재시작.
+    // 연타로 auctionRunning(서버 왕복으로 늦게 반영)을 stale하게 봐 중복 시작되는 것을 동기 잠금으로 막는다.
+    const startingRef = useRef(false);
     const handleStartAuction = async () => {
+        if (startingRef.current) return;
         if (!auctionTarget) { toast.error('대상자를 먼저 선택하세요.'); return; }
-        if (auctionRunning) {
-            if (!(await confirmDialog(`${auctionTarget.fake_name} 경매를 재시작하시겠습니까?\n현재 회차 입찰이 초기화됩니다.`))) return;
-            await team.clearBidsForTarget();
-            await timer.startAuction(auctionTarget, true);
-            return;
+        startingRef.current = true;
+        try {
+            if (auctionRunning) {
+                if (!(await confirmDialog(`${auctionTarget.fake_name} 경매를 재시작하시겠습니까?\n현재 회차 입찰이 초기화됩니다.`))) return;
+                await team.clearBidsForTarget();
+                await timer.startAuction(auctionTarget, true);
+            } else {
+                await timer.startAuction(auctionTarget);
+            }
+        } finally {
+            startingRef.current = false;
         }
-        timer.startAuction(auctionTarget);
     };
 
     return (
