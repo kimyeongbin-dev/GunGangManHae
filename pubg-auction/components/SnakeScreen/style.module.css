@@ -1,0 +1,223 @@
+/* components/SnakeScreen/style.module.css */
+.wrap {
+    color: #eee;
+    padding: var(--space-5);
+}
+.header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-4);
+    justify-content: space-between;
+}
+.title {
+    color: #ff9800;
+    margin: 0;
+}
+.count {
+    color: #aaa;
+}
+
+/* 3단 레이아웃: 좌(4x4 티어 그리드) · 가운데(버튼) · 우(편성표).
+   좌·우를 같은 높이로 늘리고(stretch), 표가 그 높이를 채우게 해 표 높이 = 그리드 높이. */
+.body {
+    gap: var(--space-5);
+    display: flex;
+    align-items: stretch;
+}
+.leftPanel {
+    flex: 0.8;
+    padding: var(--space-4);
+    background: #1e1e1e;
+    min-width: 0;
+    border-radius: 8px;
+}
+.rightPanel {
+    flex: 1.2; /* 가운데 버튼 열 공간을 표에서 내주도록 축소(그리드는 flex 0.8 유지) */
+    display: flex;
+    min-width: 0;
+    overflow-x: auto;
+    flex-direction: column;
+}
+
+/* 가운데 버튼 열 (팀장 추첨 + 티어별 초기화) */
+.midPanel {
+    gap: var(--space-3);
+    display: flex;
+    min-width: 8rem;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+}
+.rerollGroup {
+    gap: var(--space-2);
+    display: flex;
+    flex-direction: column;
+}
+.rerollBtn {
+    color: #ddd;
+    border: 1px solid #555;
+    cursor: pointer;
+    padding: var(--space-1-5) var(--space-3);
+    background: #333;
+    white-space: nowrap;
+    border-radius: 4px;
+}
+.rerollBtn:hover:not(:disabled) {
+    background: #3a2a2a;
+    border-color: #f44336;
+}
+.rerollBtn:disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+/* 좌측 패널 헤더(현재 차례 안내) */
+.panelTitle {
+    color: #eee;
+    margin-bottom: var(--space-3);
+}
+.turnTeam {
+    color: #ce93d8;
+}
+.turnHint {
+    color: #aaa;
+    font-weight: normal;
+}
+.done {
+    color: #4caf50;
+    font-weight: bold;
+}
+
+/* 현재 차례 티어 16명 4x4 그리드 */
+.tierGrid {
+    gap: var(--space-2);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+}
+.cell {
+    gap: var(--space-0-5);
+    color: #fff;
+    border: 2px solid #555;
+    cursor: default;
+    display: flex;
+    padding: var(--space-2);
+    overflow: hidden;
+    background: #222;
+    aspect-ratio: 1;
+    align-items: center;
+    border-radius: 6px;
+    flex-direction: column;
+    justify-content: center;
+}
+.cellTier1 {
+    border-color: #ff9800;
+}
+.cellTier2 {
+    border-color: #2196f3;
+}
+.cellTier3 {
+    border-color: #4caf50;
+}
+.cellTier4 {
+    border-color: #9e9e9e;
+}
+.pickable {
+    cursor: pointer;
+}
+.pickable:hover {
+    background: #2f2f2f;
+}
+.taken {
+    opacity: 0.4;
+}
+.cellSkel {
+    color: #555;
+    border-color: #444;
+    border-style: dashed;
+}
+.cellName {
+    overflow: hidden;
+    max-width: 100%;
+    font-weight: bold;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.cellDmg {
+    color: #ccc;
+    font-size: 0.8rem;
+}
+.cellTeam {
+    color: #ff9800;
+    font-size: 0.75rem;
+}
+
+/* 편성표 */
+.table {
+    width: 100%;
+    height: 100%; /* 우측 패널(=그리드 높이)을 채워 각 행이 늘어나도록 */
+    font-size: 0.9rem;
+    background: #1e1e1e;
+    table-layout: fixed; /* 열 너비를 내용과 무관하게 고정(글자 따라 흔들리지 않게) → 꽉 채워도 안정 */
+    border-collapse: collapse;
+}
+.th {
+    color: #eee;
+    border: 1px solid #333;
+    padding: var(--space-2) var(--space-3);
+    background: #2d2d2d;
+    white-space: nowrap;
+}
+.thTeam {
+    width: 18%; /* 팀명 열 폭. 나머지 티어 4열은 고정 레이아웃이 균등 분배 */
+}
+.td {
+    border: 1px solid #333;
+    padding: var(--space-1-5) var(--space-2);
+    overflow: hidden;
+    position: relative; /* × 취소 버튼 절대 위치 기준 */
+    text-align: center;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.teamName {
+    color: #ff9800;
+    background: #252525;
+    font-weight: bold;
+}
+.leaderCell {
+    color: #ffcc80;
+    background: #2a2320;
+    font-weight: bold;
+}
+.turnCell {
+    background: #2e2450;
+    box-shadow: inset 0 0 0 2px #9c27b0;
+}
+
+/* 스네이크 픽 칸 내부 (이름은 가운데, × 취소는 셀 우측에 세로로 일렬 고정) */
+.pickName {
+    color: #eee;
+}
+.cancelBtn {
+    top: 50%;
+    color: #e57373;
+    right: var(--space-1);
+    border: none;
+    cursor: pointer;
+    position: absolute;
+    transform: translateY(-50%);
+    font-size: 1.1rem;
+    background: none;
+    line-height: 1;
+}
+.turnMark {
+    color: #ce93d8;
+    font-weight: bold;
+}
+.wait {
+    color: #555;
+}
+.vacant {
+    color: #666;
+    font-style: italic;
+}
