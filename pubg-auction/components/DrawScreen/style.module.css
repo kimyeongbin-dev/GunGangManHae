@@ -36,6 +36,14 @@
     background: #f44336;
     border-radius: 6px;
 }
+.snakeBtn {
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    padding: var(--space-2-5) var(--space-5);
+    background: #00897b;
+    border-radius: 6px;
+}
 .empty {
     color: #888;
     padding: 3.75rem 0; /* 3.75rem = 60px */

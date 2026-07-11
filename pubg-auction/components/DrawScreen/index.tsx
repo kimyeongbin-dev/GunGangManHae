@@ -11,6 +11,7 @@ import { confirmDialog } from '@/lib/toast';
 import fonts from '../typography.module.css';
 import styles from './style.module.css';
 import { drawLeaders, releaseLeaders } from './drawActions';
+import { drawSnakeLeaders } from '../SnakeScreen/snakeActions';
 
 export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean; revealNames: boolean }) {
     // 실시간 참가자 목록에서 팀장(is_leader)만 추린다.
@@ -35,6 +36,13 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
         if (isAdmin) setPins(await fetchLeaderPins());
     };
 
+    // 스네이크 팀장 추첨: 한 티어를 무작위로 뽑아 그 티어 16명을 팀장으로. (경매와 달리 PIN 없음)
+    const handleSnakeDraw = async () => {
+        if (leaders.length > 0 && !(await confirmDialog('다시 추첨하면 기존 팀 구성과 경매/스네이크 내역이 모두 초기화됩니다.\n계속하시겠습니까?'))) return;
+        const ok = await drawSnakeLeaders();
+        if (ok) setPins({}); // 스네이크는 PIN을 만들지 않으므로 목록 비움
+    };
+
     // 해제: 전원 익명 미배정 복귀 → PIN도 폐기되므로 목록 비움.
     const handleRelease = async () => {
         if (!(await confirmDialog('모든 팀장을 해제하고 익명 참가자로 되돌립니다.\n팀 구성과 경매 내역도 모두 초기화됩니다. 계속하시겠습니까?'))) return;
@@ -56,7 +64,10 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
                             </button>
                         )}
                         <button onClick={handleDraw} className={`${fonts.drawBtn} ${styles.drawBtn}`}>
-                            {leaders.length > 0 ? '팀장 다시 추첨' : '팀장 추첨'}
+                            경매 팀장 추첨
+                        </button>
+                        <button onClick={handleSnakeDraw} className={`${fonts.drawBtn} ${styles.snakeBtn}`}>
+                            스네이크 팀장 추첨
                         </button>
                     </div>
                 )}
