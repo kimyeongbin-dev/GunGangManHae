@@ -87,6 +87,14 @@
     composes: headerBtn;
     background: #f44336;
 } /* 모드 해제 */
+.revealBtn {
+    composes: headerBtn;
+    background: #4caf50;
+} /* 결과: 전체 실명 공개(비공개 상태) */
+.revealOnBtn {
+    composes: headerBtn;
+    background: #f44336;
+} /* 결과: 공개 중 → 클릭 시 비공개 */
 
 .navButtons {
     gap: var(--space-2-5);

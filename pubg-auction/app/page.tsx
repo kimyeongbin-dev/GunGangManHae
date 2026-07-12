@@ -2,14 +2,16 @@
 // app/page.tsx
 // ---------------------------------------------------------------------------
 // [SPA 루트] 화면(참가자/추첨/경매/스네이크/결과) 전환.
-//  · 참가자·추첨·경매·스네이크: 모든 접속자가 자기 nav로 자유 이동(로컬, 서로 독립).
-//  · 결과: 진행자만 이동 가능. 진행자가 결과로 넘기면 page_state='result'가 되어
-//      (1) 전원이 결과 화면으로 강제 전환되고 (2) 서버(result_names RPC)가 실명을 공개한다.
-//  · 즉 page_state(hostPage)는 진행자 전용 — '결과 공개 스위치' + 신규 접속 기본 화면 역할.
-//  · 진행자 로그인은 Supabase Auth(이메일+비번). 로그인하면 isAdmin=true(단, 실제 권한은 서버 RLS가 검증).
+//  · 모든 접속자가 자기 nav로 자유 이동(로컬, 서로 독립) — 결과도 일반 페이지(강제 이동 없음).
+//  · 실명 공개는 '전체 공개' 스위치로만 발생: 진행자가 결과 페이지의 '전체 실명 공개' 버튼을 누르면
+//      page_state.reveal_until = now+60초 가 되고, 그 시각까지만 result_names() RPC가 전원에게 실명을 반환.
+//      만료(60초) 또는 진행자 '모드 해제' 시 자동 비공개. (블라인드 종료는 이 버튼을 눌러야만 발생)
+//  · 진행자는 '익명/실명 보는 중' 토글로 자기 화면에서만 실명을 개인 확인(전체 공개와 무관).
+//  · 진행자 로그인은 Supabase Auth(이메일+비번). isAdmin은 UI용(실제 권한은 서버 RLS가 검증).
 //  · 광클 방지: window 캡처 리스너로 버튼별 600ms 쓰로틀(모든 버튼 공통, React 디스패치 전 차단).
 // ---------------------------------------------------------------------------
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import styles from './page.module.css';
 import { supabase } from '@/lib/supabaseClient';
 import { toast, confirmDialog } from '@/lib/toast';
@@ -21,49 +23,88 @@ import ParticipantsScreen from '@/components/ParticipantsScreen';
 import { RealtimeAuctionProvider } from '@/components/AuctionScreen/hooks/RealtimeAuctionProvider';
 import { regenerateAnonymous } from '@/components/AuctionScreen/anonActions';
 
-// 화면 종류. page_state.current_page 와 동일한 값('participants'는 로컬 브라우즈용이라 결과 게이팅과 무관).
+// 화면 종류(모두 로컬 자유 이동).
 type PageView = 'participants' | 'draw' | 'auction' | 'snake' | 'result';
 
 // 진행자 계정 이메일 (비밀 아님, 아이디 역할). Supabase Auth 계정 및 SQL is_admin()과 반드시 일치.
 const ADMIN_EMAIL = 'admin@gungang.local';
+const REVEAL_DURATION_MS = 60_000; // '전체 실명 공개'가 유지되는 시간(이후 자동 비공개)
 
 export default function MainApp() {
-  // hostPage: page_state(공유). 진행자가 정하는 값 = 결과 공개 스위치 + 신규 접속 기본 화면. null=로딩.
-  const [hostPage, setHostPage] = useState<PageView | null>(null);
-  // localView: 비진행자의 로컬 이동 위치(참가자/추첨/경매/스네이크). 진행자에겐 쓰이지 않음.
-  const [localView, setLocalView] = useState<PageView>('auction');
-  const [isAdmin, setIsAdmin] = useState(false);            // 진행자 세션 여부(UI용, 실제 권한은 서버 검증)
-  const [adminCode, setAdminCode] = useState('');           // 진행자 비밀번호 입력값
-  const [revealNames, setRevealNames] = useState(false);    // 진행자 실명(비제이명) 공개 토글
+  const [view, setView] = useState<PageView>('auction');                // 로컬 화면(모두 자유 이동)
+  const [isAdmin, setIsAdmin] = useState(false);                        // 진행자 세션 여부(UI용, 실제 권한은 서버 검증)
+  const [adminCode, setAdminCode] = useState('');                      // 진행자 비밀번호 입력값
+  const [revealNames, setRevealNames] = useState(false);               // 진행자 개인 실명 토글(자기 화면만)
+  const [revealUntil, setRevealUntil] = useState<string | null>(null); // 전체 실명 공개 만료시각(공유). null=비공개
+  const [nowTs, setNowTs] = useState(() => Date.now());                // 만료 판정용 현재시각(공개 중에만 초 단위 갱신)
 
-  // page_state 구독: 신규 접속 기본 화면 + 진행자의 '결과' 전환(전원 강제/실명 공개) 감지.
+  // 언로드(탭 닫기) 즉시 비공개 처리용 ref: 언로드 중엔 async/await를 못 쓰므로 값을 동기적으로 참조한다.
+  const accessTokenRef = useRef<string | null>(null); // 현재 진행자 JWT (page_state 쓰기 인증용)
+  const revealActiveRef = useRef(false);              // 지금 전체 공개 중인지
+
+  // page_state.reveal_until 구독: 진행자의 '전체 공개' 스위치를 전원이 실시간으로 감지.
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from('page_state').select('current_page').eq('id', 1).maybeSingle();
-      const initial = (data?.current_page as PageView) ?? 'auction';
-      setHostPage(initial);
-      setLocalView(initial === 'result' ? 'auction' : initial); // 접속 시 진행자 위치로 착지(결과면 경매 기본)
+      const { data } = await supabase.from('page_state').select('reveal_until').eq('id', 1).maybeSingle();
+      setRevealUntil((data?.reveal_until as string | null) ?? null);
     })();
 
     const channel = supabase
       .channel('page_state_changes')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_state' },
-        (payload) => {
-          const next = (payload.new as { current_page: PageView }).current_page;
-          if (next) setHostPage(next); // 결과로 바뀌면 비진행자는 아래 view 계산으로 강제 전환됨
-        }
+        (payload) => setRevealUntil((payload.new as { reveal_until: string | null }).reveal_until ?? null),
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // 진행자 세션 감시: Supabase Auth 세션이 진행자 계정이면 isAdmin. 새로고침해도 유지.
+  // 공개 자동 만료(UI용): 실명 게이팅 자체는 서버(result_names가 reveal_until>now() 검사)가 하고,
+  // 여기선 만료 '시점에 1회만' now를 갱신해 화면(버튼 라벨·표시 이름)을 비공개로 되돌린다.
+  // Realtime은 행 변경 때만 이벤트를 쏘고 시간 경과로는 안 쏘므로, 이 1회 타이머로 만료 순간을 잡는다.
   useEffect(() => {
-    const apply = (email: string | undefined) => setIsAdmin(email === ADMIN_EMAIL);
-    supabase.auth.getSession().then(({ data }) => apply(data.session?.user.email ?? undefined));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => apply(session?.user.email ?? undefined));
+    if (!revealUntil) return;
+    const ms = Date.parse(revealUntil) - Date.now();
+    if (ms <= 0) { setNowTs(Date.now()); return; }
+    const id = setTimeout(() => setNowTs(Date.now()), ms);
+    return () => clearTimeout(id);
+  }, [revealUntil]);
+
+  const publicReveal = !!revealUntil && Date.parse(revealUntil) > nowTs;
+  useEffect(() => { revealActiveRef.current = publicReveal; }, [publicReveal]);
+
+  // 진행자 세션 감시: Supabase Auth 세션이 진행자 계정이면 isAdmin. 새로고침해도 유지. JWT는 언로드 처리용으로 ref에도 보관.
+  useEffect(() => {
+    const apply = (session: Session | null) => {
+      setIsAdmin(session?.user.email === ADMIN_EMAIL);
+      accessTokenRef.current = session?.access_token ?? null;
+    };
+    supabase.auth.getSession().then(({ data }) => apply(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => apply(session));
     return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // 탭 닫기/이탈 즉시 비공개: 공개 중이면 언로드 순간 keepalive fetch로 reveal_until=null 전송.
+  // (supabase-js update는 언로드 중 취소될 수 있어 raw fetch+keepalive 사용. 60초 만료는 최후 안전망.)
+  useEffect(() => {
+    const onHide = () => {
+      const token = accessTokenRef.current;
+      const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!revealActiveRef.current || !token || !url || !key) return;
+      try {
+        fetch(`${url}/rest/v1/page_state?id=eq.1`, {
+          method: 'PATCH',
+          keepalive: true,
+          headers: { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reveal_until: null }),
+        });
+      } catch {
+        /* 언로드 중 실패는 무시 — 60초 만료가 최후 안전망 */
+      }
+    };
+    window.addEventListener('pagehide', onHide);
+    return () => window.removeEventListener('pagehide', onHide);
   }, []);
 
   // 광클(1초에 수십 번) 방지: 같은 버튼의 연속 클릭을 600ms 쓰로틀한다.
@@ -102,32 +143,27 @@ export default function MainApp() {
     }
   };
 
-  // 실제 렌더 화면:
-  //  · 진행자 → 자기가 고른 화면(hostPage).
-  //  · 비진행자 → 진행자가 '결과'로 넘겼으면 강제로 결과, 아니면 자기 로컬 화면(localView).
-  const view: PageView | null =
-    hostPage === null ? null : isAdmin ? hostPage : hostPage === 'result' ? 'result' : localView;
+  // 전체 실명 공개/비공개 스위치(진행자 전용). on=now+60초, off=null(비공개).
+  // RLS로 막히면(진행자 세션 만료 등) Supabase는 "에러 없이 0행"만 갱신하므로 .select()로 반영을 확인한다.
+  const setPublicReveal = async (on: boolean): Promise<boolean> => {
+    const reveal_until = on ? new Date(Date.now() + REVEAL_DURATION_MS).toISOString() : null;
+    const { data, error } = await supabase
+      .from('page_state')
+      .update({ reveal_until, updated_at: new Date().toISOString() })
+      .eq('id', 1)
+      .select();
+    if (error || !data?.length) {
+      toast.error('저장에 실패했습니다.\n진행자 세션이 만료됐을 수 있어요. 모드 해제 후 다시 로그인해 주세요.');
+      return false;
+    }
+    setRevealUntil(reveal_until); // 낙관적 반영(실시간 이벤트로도 곧 동일 갱신)
+    return true;
+  };
 
-  // 진행자 화면 전환: page_state 갱신(신규 기본 화면 + 결과 공개 스위치).
-  // DB를 먼저 갱신한 뒤 로컬 반영 → 결과 화면의 result_names()가 page_state='result'를 확실히 보게 함.
-  // ★ 결과 전환은 전원 실명 공개(블라인드 종료)라 되돌릴 수 없으므로 실수 방지 확인을 받는다.
-  const changePageAsAdmin = async (pageName: PageView) => {
-    if (
-      pageName === 'result' &&
-      hostPage !== 'result' &&
-      !(await confirmDialog('결과 화면으로 넘기면 전원에게 실명이 공개되고 블라인드가 종료됩니다.\n정말 결과를 공개하시겠습니까?'))
-    ) {
-      return;
-    }
-    if (pageName === 'result') {
-      // 결과는 실명 공개가 page_state='result'에 달렸으니 DB 먼저 갱신한 뒤 전환.
-      await supabase.from('page_state').update({ current_page: pageName }).eq('id', 1);
-      setHostPage(pageName);
-    } else {
-      // 그 외는 화면을 '즉시' 전환(await로 이전 페이지가 남아 깜빡이지 않게)하고, 공유 상태는 백그라운드로 갱신.
-      setHostPage(pageName);
-      void supabase.from('page_state').update({ current_page: pageName }).eq('id', 1);
-    }
+  // 결과 페이지 헤더 버튼: 전체 실명 공개(블라인드 종료 확인) / 비공개. 켜면 60초 뒤 자동 비공개.
+  const handleTogglePublicReveal = async () => {
+    if (!publicReveal && !(await confirmDialog('지금 전체에게 실명을 공개하면 블라인드가 종료됩니다.\n1분 뒤 자동으로 비공개로 돌아갑니다. 공개할까요?'))) return;
+    await setPublicReveal(!publicReveal);
   };
 
   // 진행자 로그인 로직 (Supabase Auth: 서버에서 비밀번호 검증 → JWT 발급)
@@ -142,13 +178,14 @@ export default function MainApp() {
     // isAdmin은 onAuthStateChange가 반영
   };
 
-  // 진행자 모드 해제 로직
+  // 진행자 모드 해제: 진행자가 빠지면 전체 실명 공개는 비공개로 고정(로그아웃 전 인증 상태에서 갱신).
   const handleAdminLogout = async () => {
-    if (await confirmDialog('진행자 모드를 해제하시겠습니까?')) {
-      await supabase.auth.signOut();
-      setAdminCode('');
-      toast.info('일반 참가자 모드로 전환되었습니다.');
-    }
+    if (!(await confirmDialog('진행자 모드를 해제하시겠습니까?'))) return;
+    await supabase.from('page_state').update({ reveal_until: null, updated_at: new Date().toISOString() }).eq('id', 1);
+    setRevealUntil(null);
+    await supabase.auth.signOut();
+    setAdminCode('');
+    toast.info('일반 참가자 모드로 전환되었습니다.');
   };
 
   return (
@@ -156,26 +193,13 @@ export default function MainApp() {
     <div className={styles.container}>
       {/* --- 상단 헤더 & 화면 전환 --- */}
       <header className={styles.header}>
-        {/* 좌측: 페이지 이동 탭 (진행자=전원 전환, 비진행자=로컬 이동) */}
+        {/* 좌측: 페이지 이동 탭 (모두 동일하게 로컬 이동, 결과 포함) */}
         <div className={styles.navGroup}>
-          {isAdmin ? (
-            <>
-              <button onClick={() => changePageAsAdmin('participants')} className={`${styles.navBtn} ${hostPage === 'participants' ? styles.active : ''}`}>참가자</button>
-              <button onClick={() => changePageAsAdmin('draw')} className={`${styles.navBtn} ${hostPage === 'draw' ? styles.active : ''}`}>팀장 추첨</button>
-              <button onClick={() => changePageAsAdmin('auction')} className={`${styles.navBtn} ${hostPage === 'auction' ? styles.active : ''}`}>경매</button>
-              <button onClick={() => changePageAsAdmin('snake')} className={`${styles.navBtn} ${hostPage === 'snake' ? styles.active : ''}`}>스네이크</button>
-              <button onClick={() => changePageAsAdmin('result')} className={`${styles.navBtn} ${hostPage === 'result' ? styles.active : ''}`}>결과</button>
-            </>
-          ) : hostPage === 'result' ? (
-            <span className={styles.adminBadge}>진행자가 결과를 발표 중입니다</span>
-          ) : (
-            <>
-              <button onClick={() => setLocalView('participants')} className={`${styles.navBtn} ${view === 'participants' ? styles.active : ''}`}>참가자</button>
-              <button onClick={() => setLocalView('draw')} className={`${styles.navBtn} ${view === 'draw' ? styles.active : ''}`}>팀장 추첨</button>
-              <button onClick={() => setLocalView('auction')} className={`${styles.navBtn} ${view === 'auction' ? styles.active : ''}`}>경매</button>
-              <button onClick={() => setLocalView('snake')} className={`${styles.navBtn} ${view === 'snake' ? styles.active : ''}`}>스네이크</button>
-            </>
-          )}
+          <button onClick={() => setView('participants')} className={`${styles.navBtn} ${view === 'participants' ? styles.active : ''}`}>참가자</button>
+          <button onClick={() => setView('draw')} className={`${styles.navBtn} ${view === 'draw' ? styles.active : ''}`}>팀장 추첨</button>
+          <button onClick={() => setView('auction')} className={`${styles.navBtn} ${view === 'auction' ? styles.active : ''}`}>경매</button>
+          <button onClick={() => setView('snake')} className={`${styles.navBtn} ${view === 'snake' ? styles.active : ''}`}>스네이크</button>
+          <button onClick={() => setView('result')} className={`${styles.navBtn} ${view === 'result' ? styles.active : ''}`}>결과</button>
         </div>
 
         {/* 중앙: 로고 + 제목 (좌우 그룹 폭과 무관하게 가운데 열에 고정) */}
@@ -190,6 +214,15 @@ export default function MainApp() {
         <div className={styles.headerRight}>
           {isAdmin ? (
             <>
+              {/* 결과 페이지에서만: 전체 실명 공개/비공개 스위치(블라인드 종료 스위치) */}
+              {view === 'result' && (
+                <button
+                  onClick={handleTogglePublicReveal}
+                  className={publicReveal ? styles.revealOnBtn : styles.revealBtn}
+                >
+                  {publicReveal ? '전체 실명 비공개' : '전체 실명 공개'}
+                </button>
+              )}
               <button
                 onClick={() => setRevealNames((v) => !v)}
                 className={`${styles.headerBtn} ${revealNames ? styles.headerBtnActive : ''}`}
@@ -219,16 +252,12 @@ export default function MainApp() {
 
       {/* --- 메인 콘텐츠 (SPA 화면 전환 영역) --- */}
       <main className={styles.mainContent}>
-        {view === null ? (
-          <div className={styles.loading}>불러오는 중…</div>
-        ) : (
-          <>
-            {view === 'participants' && <ParticipantsScreen isAdmin={isAdmin} revealNames={revealNames} />}
-            {view === 'draw' && <DrawScreen isAdmin={isAdmin} revealNames={revealNames} />}
-            {view === 'auction' && <AuctionScreen isAdmin={isAdmin} revealNames={revealNames} />}
-            {view === 'snake' && <SnakeScreen isAdmin={isAdmin} revealNames={revealNames} />}
-            {view === 'result' && <ResultScreen />}
-          </>
+        {view === 'participants' && <ParticipantsScreen isAdmin={isAdmin} revealNames={revealNames} />}
+        {view === 'draw' && <DrawScreen isAdmin={isAdmin} revealNames={revealNames} />}
+        {view === 'auction' && <AuctionScreen isAdmin={isAdmin} revealNames={revealNames} />}
+        {view === 'snake' && <SnakeScreen isAdmin={isAdmin} revealNames={revealNames} />}
+        {view === 'result' && (
+          <ResultScreen isAdmin={isAdmin} revealNames={revealNames} publicReveal={publicReveal} />
         )}
       </main>
     </div>

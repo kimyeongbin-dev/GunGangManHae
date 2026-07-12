@@ -6,7 +6,7 @@
 // ★ 기밀성(confidentiality) 모델 — 실명이 어디서 어떻게 나오는지 한눈에:
 //   · 실명(비제이명)은 오직 participant_secrets 테이블에만 있다.
 //   · fetchSecretNames() : 진행자(Supabase Auth)만 RLS로 읽힘 → 진행자 화면 실명 표시용.
-//   · fetchResultNames() : result_names() RPC. page_state='result'일 때만 anon에게 실명 반환.
+//   · fetchResultNames() : result_names() RPC. page_state.reveal_until > now()(전체 공개 중)일 때만 anon에게 실명 반환.
 //   · participants 테이블에는 real_name 컬럼이 없다(공개 컬럼 reveal_name은 팀장만 채워짐).
 //   → 따라서 이 파일이 "실명이 클라이언트로 흘러나가는 유일한 통로"이며, 그 통로는 전부 서버(RLS/RPC)가 게이팅한다.
 // ---------------------------------------------------------------------------
@@ -79,8 +79,8 @@ export async function fetchSecretNames(): Promise<Record<string, string>> {
     return rowsToMap(data as { p_token: string; real_name: string }[] | null, (r) => r.p_token, (r) => r.real_name);
 }
 
-// 결과 공개 실명 맵 { p_token: "실명" }. result_names() RPC 는 page_state='result'일 때만 실명 반환.
-// 사용처: ResultScreen(최종 결과에서만 실명 공개).
+// 결과 공개 실명 맵 { p_token: "실명" }. result_names() RPC 는 page_state.reveal_until > now()(전체 공개 중)일 때만 실명 반환.
+// 사용처: ResultScreen(진행자가 '전체 실명 공개'를 눌러 공개 중일 때만).
 export async function fetchResultNames(): Promise<Record<string, string>> {
     const { data } = await supabase.rpc('result_names');
     return rowsToMap(data as { p_token: string; real_name: string }[] | null, (r) => r.p_token, (r) => r.real_name);
