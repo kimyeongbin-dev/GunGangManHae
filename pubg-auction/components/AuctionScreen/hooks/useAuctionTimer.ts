@@ -69,24 +69,39 @@ export function useAuctionTimer({ isAdmin, onExpire }: Options) {
     useEffect(() => {
         expiredRef.current = false;
         let id: ReturnType<typeof setInterval> | undefined;
+        let cancelled = false;
+
+        // 만료 직전 서버의 최신 timer_end_at을 재확인한다.
+        // 종료 1초 전 입찰의 '10초 연장'은 realtime 반영이 자동낙찰보다 늦어 무시될 수 있으므로,
+        // 진행자가 자동 낙찰을 실행하기 전에 서버 값을 직접 확인 → 연장됐으면 낙찰을 취소하고 이어간다.
+        const finalizeIfReallyOver = async () => {
+            const { data } = await supabase.from('auction_meta').select('timer_end_at').eq('id', 1).maybeSingle();
+            if (cancelled) return;
+            const freshEnd = data?.timer_end_at ? new Date(data.timer_end_at).getTime() : null;
+            if (freshEnd && freshEnd - serverNow() > 0) {
+                // 서버가 연장함 → 자동 낙찰 취소하고 새 종료시각으로 계속(endAt 변경이 이 effect를 재실행해 tick 재개).
+                expiredRef.current = false;
+                setEndAt(freshEnd);
+                return;
+            }
+            onExpire();
+        };
 
         const tick = () => {
             if (endAt === null) { setTimeLeft(0); return; }
             const msLeft = endAt - serverNow();
             setTimeLeft(Math.max(0, Math.ceil(msLeft / 1000)));
-            if (msLeft <= 0) {
-                if (!expiredRef.current) {
-                    expiredRef.current = true;
-                    // 시간이 다 되었을 때, 진행자인 경우에만 종료 콜백 실행
-                    if (isAdmin) onExpire();
-                }
-                if (id) clearInterval(id); // 만료 후 정지
+            if (msLeft <= 0 && !expiredRef.current) {
+                expiredRef.current = true;
+                if (id) clearInterval(id); // 만료 후 정지(연장이면 재확인이 endAt을 갱신해 재개)
+                // 자동 낙찰은 진행자만. 그 전에 서버의 연장 여부를 확인한다.
+                if (isAdmin) void finalizeIfReallyOver();
             }
         };
 
         tick(); // 즉시 1회 반영
         if (endAt !== null) id = setInterval(tick, 500);
-        return () => { if (id) clearInterval(id); };
+        return () => { cancelled = true; if (id) clearInterval(id); };
     }, [endAt, isAdmin, onExpire]);
 
     // [진행자] 경매 대상 지정 (모든 클라이언트에 공유). 지정 시 타이머는 아직 시작 안 함.
