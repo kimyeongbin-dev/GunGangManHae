@@ -18,6 +18,10 @@
     --space-6: 1.5rem; /* 24px */
     --space-10: 2.5rem; /* 40px */
 }
+/* 세로 스크롤바가 생겨도 그 폭만큼 페이지 가로폭이 줄지 않게 스크롤바 자리를 항상 확보 */
+html {
+    scrollbar-gutter: stable;
+}
 body {
     color: #ffffff;
     margin: 0;
