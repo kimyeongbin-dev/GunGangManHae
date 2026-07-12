@@ -44,11 +44,12 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
         if (isAdmin) setPins(await fetchLeaderPins());
     };
 
-    // 스네이크 팀장 추첨: 한 티어를 무작위로 뽑아 그 티어 16명을 팀장으로. (경매와 달리 PIN 없음)
+    // 스네이크 팀장 추첨: 한 티어를 무작위로 뽑아 그 티어 16명을 팀장으로.
+    // 겸용 대비(팀원을 경매로 뽑을 수 있음) 팀장 PIN도 발급되므로, 추첨 후 PIN 목록을 로드한다.
     const handleSnakeDraw = async () => {
         if (leaders.length > 0 && !(await confirmDialog('다시 추첨하면 기존 팀 구성과 경매/스네이크 내역이 모두 초기화됩니다.\n계속하시겠습니까?'))) return;
         const ok = await drawSnakeLeaders();
-        if (ok) setPins({}); // 스네이크는 PIN을 만들지 않으므로 목록 비움
+        if (ok && isAdmin) setPins(await fetchLeaderPins());
     };
 
     // 해제: 전원 익명 미배정 복귀 → PIN도 폐기되므로 목록 비움.

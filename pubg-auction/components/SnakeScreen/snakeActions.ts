@@ -13,6 +13,7 @@ import { TEAM_COUNT } from '../AuctionScreen/types';
 import { shuffle } from '../AuctionScreen/utils';
 import { resetAuctionData, fetchSecretNames } from '../AuctionScreen/auctionData';
 import { reassignAnonymous } from '../AuctionScreen/anonActions';
+import { genUniquePins } from '../DrawScreen/drawActions';
 import { ALL_TIERS } from './snakeOrder';
 import type { Participant } from '../AuctionScreen/types';
 
@@ -53,6 +54,12 @@ export async function drawSnakeLeaders(): Promise<boolean> {
     );
     if (results.find((r) => r.error)) { toast.error('팀장 배정 중 오류가 발생했습니다.'); return false; }
 
+    // 4) 팀장 PIN 발급 — 겸용 대비: 팀원을 경매로 뽑을 땐 팀장이 이 PIN으로 입찰한다(경매 추첨과 동일).
+    const pins = genUniquePins(TEAM_COUNT);
+    const pinRows = chosen.map((p, i) => ({ team_name: `${i + 1}팀`, p_token: p.p_token, pin: pins[i] }));
+    const { error: pinErr } = await supabase.from('leader_pins').insert(pinRows);
+    if (pinErr) { toast.error('팀장 PIN 생성 실패: ' + pinErr.message); return false; }
+
     return true;
 }
 
@@ -70,13 +77,26 @@ export async function cancelSnakePick(pToken: string): Promise<boolean> {
     return true;
 }
 
-// [진행자] 특정 티어 리롤: 그 티어의 스네이크 픽(팀장 제외)을 전부 미배정으로 되돌린다.
-// 팀장 티어는 대상이 아니다(is_leader=true는 건드리지 않음). 이후 그 티어가 다시 현재 차례가 된다.
+// [진행자] 특정 티어 초기화: 그 티어에 배정된 팀원(팀장 제외)을 전부 미배정으로 되돌린다.
+// 스네이크 픽이든 경매 낙찰이든 모두 해제하고, 경매 낙찰이면 입찰까지 삭제해 포인트를 롤백한다.
+// 팀장 티어는 대상이 아니다(is_leader=true는 건드리지 않음).
 export async function resetSnakeTier(tier: string): Promise<boolean> {
-    const { error } = await supabase.from('participants')
-        .update({ team_name: null })
-        .eq('tier', tier)
-        .eq('is_leader', false);
+    // 그 티어의 비팀장 참가자 토큰(스네이크 픽이든 경매 낙찰이든 배정된 사람들).
+    const { data, error } = await supabase.from('participants')
+        .select('p_token').eq('tier', tier).eq('is_leader', false);
     if (error) { toast.error('티어 초기화 실패: ' + error.message); return false; }
+    const tokens = (data ?? []).map((r) => r.p_token as string);
+
+    // 경매 낙찰 롤백: 해당 참가자들의 입찰 기록 삭제 → 소모 포인트/최고가 복구.
+    // 스네이크 픽은 입찰이 없어 지울 게 없고, 경매 티어를 눌러도 이 롤백으로 안전하게 초기화된다.
+    if (tokens.length > 0) {
+        const { error: bidErr } = await supabase.from('auction_bids').delete().in('p_token', tokens);
+        if (bidErr) { toast.error('티어 초기화(입찰 삭제) 실패: ' + bidErr.message); return false; }
+    }
+
+    // 팀 배정 해제.
+    const { error: upErr } = await supabase.from('participants')
+        .update({ team_name: null }).eq('tier', tier).eq('is_leader', false);
+    if (upErr) { toast.error('티어 초기화 실패: ' + upErr.message); return false; }
     return true;
 }

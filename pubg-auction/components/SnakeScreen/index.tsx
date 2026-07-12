@@ -115,7 +115,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
     // 팀장 티어는 초기화 대상이 아니므로 클릭 무시.
     const handleResetTier = async (tier: string) => {
         if (tier === leaderTier) return;
-        if (!(await confirmDialog(`${tier}티어에서 뽑은 픽을 모두 초기화할까요?`))) return;
+        if (!(await confirmDialog(`${tier}티어에 배정된 팀원을 모두 초기화할까요?\n경매로 뽑은 팀원이면 입찰·포인트도 되돌아갑니다.`))) return;
         setOptimistic({});
         await resetSnakeTier(tier);
     };

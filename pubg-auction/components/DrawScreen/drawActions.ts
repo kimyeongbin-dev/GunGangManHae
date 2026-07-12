@@ -26,8 +26,8 @@ function genPin(): string {
     return s;
 }
 
-// 서로 겹치지 않는 PIN n개 (leader_pins.pin 은 unique 제약).
-function genUniquePins(n: number): string[] {
+// 서로 겹치지 않는 PIN n개 (leader_pins.pin 은 unique 제약). 스네이크 팀장 추첨도 재사용.
+export function genUniquePins(n: number): string[] {
     const set = new Set<string>();
     while (set.size < n) set.add(genPin());
     return [...set];
