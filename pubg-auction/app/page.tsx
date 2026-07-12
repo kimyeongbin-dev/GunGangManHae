@@ -156,110 +156,63 @@ export default function MainApp() {
     <div className={styles.container}>
       {/* --- 상단 헤더 & 화면 전환 --- */}
       <header className={styles.header}>
-        <h1 className={styles.title}>건강만해 블라인드 팀 뽑기</h1>
-
-        <div className={styles.adminSection}>
-          {!isAdmin ? (
-            <div className={styles.navButtons}>
-              {/* 비진행자 자유 이동(결과는 진행자만). 진행자가 결과 발표 중이면 전원 결과로 고정. */}
-              {hostPage === 'result' ? (
-                <span className={styles.adminBadge}>진행자가 결과를 발표 중입니다</span>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setLocalView('participants')}
-                    className={`${styles.navBtn} ${view === 'participants' ? styles.active : ''}`}
-                  >
-                    참가자
-                  </button>
-                  <button
-                    onClick={() => setLocalView('draw')}
-                    className={`${styles.navBtn} ${view === 'draw' ? styles.active : ''}`}
-                  >
-                    팀장 추첨
-                  </button>
-                  <button
-                    onClick={() => setLocalView('auction')}
-                    className={`${styles.navBtn} ${view === 'auction' ? styles.active : ''}`}
-                  >
-                    경매
-                  </button>
-                  <button
-                    onClick={() => setLocalView('snake')}
-                    className={`${styles.navBtn} ${view === 'snake' ? styles.active : ''}`}
-                  >
-                    스네이크
-                  </button>
-                </>
-              )}
-
-              {/* 진행자 로그인 */}
-              <div className={styles.loginBox}>
-                <input
-                  type="password"
-                  placeholder="진행자 코드를 입력하세요."
-                  value={adminCode}
-                  onChange={(e) => setAdminCode(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAdminLogin(); }}
-                  className={styles.input}
-                />
-              </div>
-              <div>
-                <button onClick={handleAdminLogin} className={styles.btn}>로그인</button>
-              </div>
-            </div>
+        {/* 좌측: 페이지 이동 탭 (진행자=전원 전환, 비진행자=로컬 이동) */}
+        <div className={styles.navGroup}>
+          {isAdmin ? (
+            <>
+              <button onClick={() => changePageAsAdmin('participants')} className={`${styles.navBtn} ${hostPage === 'participants' ? styles.active : ''}`}>참가자</button>
+              <button onClick={() => changePageAsAdmin('draw')} className={`${styles.navBtn} ${hostPage === 'draw' ? styles.active : ''}`}>팀장 추첨</button>
+              <button onClick={() => changePageAsAdmin('auction')} className={`${styles.navBtn} ${hostPage === 'auction' ? styles.active : ''}`}>경매</button>
+              <button onClick={() => changePageAsAdmin('snake')} className={`${styles.navBtn} ${hostPage === 'snake' ? styles.active : ''}`}>스네이크</button>
+              <button onClick={() => changePageAsAdmin('result')} className={`${styles.navBtn} ${hostPage === 'result' ? styles.active : ''}`}>결과</button>
+            </>
+          ) : hostPage === 'result' ? (
+            <span className={styles.adminBadge}>진행자가 결과를 발표 중입니다</span>
           ) : (
-            <div className={styles.navButtons}>
-              {/* 페이지 이동 탭 (한 그룹). 결과로 넘기면 전원 강제 전환 + 실명 공개. */}
-              <div className={styles.navGroup}>
-                <button
-                  onClick={() => changePageAsAdmin('participants')}
-                  className={`${styles.navBtn} ${hostPage === 'participants' ? styles.active : ''}`}
-                >
-                  참가자
-                </button>
-                <button
-                  onClick={() => changePageAsAdmin('draw')}
-                  className={`${styles.navBtn} ${hostPage === 'draw' ? styles.active : ''}`}
-                >
-                  팀장 추첨
-                </button>
-                <button
-                  onClick={() => changePageAsAdmin('auction')}
-                  className={`${styles.navBtn} ${hostPage === 'auction' ? styles.active : ''}`}
-                >
-                  경매
-                </button>
-                <button
-                  onClick={() => changePageAsAdmin('snake')}
-                  className={`${styles.navBtn} ${hostPage === 'snake' ? styles.active : ''}`}
-                >
-                  스네이크
-                </button>
-                <button
-                  onClick={() => changePageAsAdmin('result')}
-                  className={`${styles.navBtn} ${hostPage === 'result' ? styles.active : ''}`}
-                >
-                  결과
-                </button>
-              </div>
+            <>
+              <button onClick={() => setLocalView('participants')} className={`${styles.navBtn} ${view === 'participants' ? styles.active : ''}`}>참가자</button>
+              <button onClick={() => setLocalView('draw')} className={`${styles.navBtn} ${view === 'draw' ? styles.active : ''}`}>팀장 추첨</button>
+              <button onClick={() => setLocalView('auction')} className={`${styles.navBtn} ${view === 'auction' ? styles.active : ''}`}>경매</button>
+              <button onClick={() => setLocalView('snake')} className={`${styles.navBtn} ${view === 'snake' ? styles.active : ''}`}>스네이크</button>
+            </>
+          )}
+        </div>
 
-              {/* 진행자 관리 (구분선과 함께 한 덩어리로 이동): 실명/익명 토글 · 익명 재생성 · 모드 해제 */}
-              <div className={styles.toolGroup}>
-                <button
-                  onClick={() => setRevealNames((v) => !v)}
-                  className={`${styles.headerBtn} ${revealNames ? styles.headerBtnActive : ''}`}
-                >
-                  {revealNames ? '실명 보는 중' : '익명 보는 중'}
-                </button>
-                <button onClick={handleRegenAnon} disabled={anonBusy} className={styles.anonBtn}>
-                  {anonBusy ? '생성 중…' : '익명 만들기'}
-                </button>
-                <button onClick={handleAdminLogout} className={styles.exitBtn}>
-                  모드 해제
-                </button>
-              </div>
-            </div>
+        {/* 중앙: 로고 + 제목 (좌우 그룹 폭과 무관하게 가운데 열에 고정) */}
+        <div className={styles.brand}>
+          {/* public/건강만해.png. 투명 PNG로 교체하면 코드 수정 없이 바로 반영됨 */}
+          <img src="/건강만해.png" alt="건강만해 로고" className={styles.logo} />
+          <h1 className={styles.title}>건강만해 블라인드 팀 뽑기</h1>
+          <img src="/건강만해.png" alt="건강만해 로고" className={styles.logo} />
+        </div>
+
+        {/* 우측: 진행자 도구(실명 토글·익명 만들기·모드 해제) 또는 진행자 로그인 */}
+        <div className={styles.headerRight}>
+          {isAdmin ? (
+            <>
+              <button
+                onClick={() => setRevealNames((v) => !v)}
+                className={`${styles.headerBtn} ${revealNames ? styles.headerBtnActive : ''}`}
+              >
+                {revealNames ? '실명 보는 중' : '익명 보는 중'}
+              </button>
+              <button onClick={handleRegenAnon} disabled={anonBusy} className={styles.anonBtn}>
+                {anonBusy ? '생성 중…' : '익명 만들기'}
+              </button>
+              <button onClick={handleAdminLogout} className={styles.exitBtn}>모드 해제</button>
+            </>
+          ) : (
+            <>
+              <input
+                type="password"
+                placeholder="진행자 코드를 입력하세요."
+                value={adminCode}
+                onChange={(e) => setAdminCode(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAdminLogin(); }}
+                className={styles.input}
+              />
+              <button onClick={handleAdminLogin} className={styles.btn}>로그인</button>
+            </>
           )}
         </div>
       </header>
