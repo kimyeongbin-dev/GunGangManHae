@@ -60,6 +60,7 @@
     display: flex;
     padding: var(--space-3);
     overflow: hidden;
+    position: relative;
     background: #222;
     min-height: 5.5rem;
     align-items: center;
@@ -96,4 +97,20 @@
 .dmg {
     color: #ccc;
     font-size: 0.95rem;
+}
+/* 진행자: 채워진 칸 '수정' 배지 · 빈 칸 '+ 등록' 힌트 */
+.editBadge {
+    top: var(--space-1);
+    color: #ddd;
+    right: var(--space-1);
+    cursor: pointer;
+    padding: 0 var(--space-1);
+    position: absolute;
+    font-size: 0.75rem;
+    background: #444;
+    border-radius: 3px;
+}
+.addHint {
+    color: #666;
+    font-size: 0.9rem;
 }
