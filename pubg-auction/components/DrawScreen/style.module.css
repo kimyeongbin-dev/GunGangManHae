@@ -83,8 +83,11 @@
     color: #555;
 }
 .pinBox {
+    gap: var(--space-1-5);
     color: #aaa;
+    display: flex;
     font-size: 0.8rem;
+    align-items: center;
     margin-top: var(--space-2);
     letter-spacing: 0.05em;
 }
@@ -92,6 +95,22 @@
     color: #4caf50;
     font-size: 1rem;
     letter-spacing: 0.15em;
+}
+/* PIN 복사 버튼 — 아이콘만, 호버 시 초록 강조 */
+.copyBtn {
+    color: #888;
+    border: none;
+    cursor: pointer;
+    padding: var(--space-0-5);
+    font-size: 1rem;
+    background: none;
+    line-height: 0;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+.copyBtn:hover {
+    color: #4caf50;
+    background: #2a2a2a;
 }
 
 /* 티어 칩 (색상은 티어별 모디파이어) */

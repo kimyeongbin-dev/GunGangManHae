@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRealtimeAuction } from '../AuctionScreen/hooks/useRealtimeAuction';
 import { TEAM_COUNT } from '../AuctionScreen/types';
 import { fetchLeaderPins } from '../AuctionScreen/auctionData';
-import { confirmDialog } from '@/lib/toast';
+import { confirmDialog, toast } from '@/lib/toast';
 import fonts from '../typography.module.css';
 import styles from './style.module.css';
 import { drawLeaders, releaseLeaders } from './drawActions';
@@ -50,6 +50,16 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
         if (leaders.length > 0 && !(await confirmDialog('다시 추첨하면 기존 팀 구성과 경매/스네이크 내역이 모두 초기화됩니다.\n계속하시겠습니까?'))) return;
         const ok = await drawSnakeLeaders();
         if (ok && isAdmin) setPins(await fetchLeaderPins());
+    };
+
+    // PIN 복사: 클립보드에 넣고 토스트로 알림(카드 클릭=상세 열림과 겹치지 않게 호출부에서 전파 차단).
+    const handleCopyPin = async (teamName: string, pin: string) => {
+        try {
+            await navigator.clipboard.writeText(pin);
+            toast.success(`${teamName} PIN 복사됨`);
+        } catch {
+            toast.error('복사에 실패했습니다.');
+        }
     };
 
     // 해제: 전원 익명 미배정 복귀 → PIN도 폐기되므로 목록 비움.
@@ -111,7 +121,24 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
                                         {/* PIN: 진행자에게만 표시. '실명 보는 중'이면 실제 PIN, '익명 보는 중'이면 마스킹(••••).
                                             참가자/관전자는 pins 자체가 비어 있어 아무것도 보이지 않는다. */}
                                         {isAdmin && pins[teamName] && (
-                                            <div className={styles.pinBox}>PIN <b>{revealNames ? pins[teamName] : '••••'}</b></div>
+                                            <div className={styles.pinBox}>
+                                                PIN <b>{revealNames ? pins[teamName] : '••••'}</b>
+                                                {/* 실명(=PIN 노출) 모드에서만 복사 버튼. 카드 클릭(상세 열림)과 겹치지 않게 전파 차단. */}
+                                                {revealNames && (
+                                                    <button
+                                                        type="button"
+                                                        className={styles.copyBtn}
+                                                        onClick={(e) => { e.stopPropagation(); handleCopyPin(teamName, pins[teamName]); }}
+                                                        title="PIN 복사"
+                                                        aria-label={`${teamName} PIN 복사`}
+                                                    >
+                                                        <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                            </div>
                                         )}
                                     </>
                                 ) : (
