@@ -45,7 +45,7 @@
 /* 8x8 참가자 그리드 */
 .board {
     margin: 0 auto;
-    max-width: 1900px;
+    max-width: 1700px;
 }
 .grid {
     gap: var(--space-2);
@@ -62,7 +62,7 @@
     overflow: hidden;
     position: relative;
     background: #222;
-    min-height: 5.5rem;
+    min-height: 5.2rem;
     align-items: center;
     border-radius: 6px;
     flex-direction: column;
