@@ -18,6 +18,7 @@ import DrawScreen from '@/components/DrawScreen';
 import ResultScreen from '@/components/ResultScreen';
 import SnakeScreen from '@/components/SnakeScreen';
 import ParticipantsScreen from '@/components/ParticipantsScreen';
+import { RealtimeAuctionProvider } from '@/components/AuctionScreen/hooks/RealtimeAuctionProvider';
 import { regenerateAnonymous } from '@/components/AuctionScreen/anonActions';
 
 // 화면 종류. page_state.current_page 와 동일한 값('participants'는 로컬 브라우즈용이라 결과 게이팅과 무관).
@@ -118,8 +119,15 @@ export default function MainApp() {
     ) {
       return;
     }
-    await supabase.from('page_state').update({ current_page: pageName }).eq('id', 1);
-    setHostPage(pageName);
+    if (pageName === 'result') {
+      // 결과는 실명 공개가 page_state='result'에 달렸으니 DB 먼저 갱신한 뒤 전환.
+      await supabase.from('page_state').update({ current_page: pageName }).eq('id', 1);
+      setHostPage(pageName);
+    } else {
+      // 그 외는 화면을 '즉시' 전환(await로 이전 페이지가 남아 깜빡이지 않게)하고, 공유 상태는 백그라운드로 갱신.
+      setHostPage(pageName);
+      void supabase.from('page_state').update({ current_page: pageName }).eq('id', 1);
+    }
   };
 
   // 진행자 로그인 로직 (Supabase Auth: 서버에서 비밀번호 검증 → JWT 발급)
@@ -144,6 +152,7 @@ export default function MainApp() {
   };
 
   return (
+    <RealtimeAuctionProvider>
     <div className={styles.container}>
       {/* --- 상단 헤더 & 화면 전환 --- */}
       <header className={styles.header}>
@@ -270,5 +279,6 @@ export default function MainApp() {
         )}
       </main>
     </div>
+    </RealtimeAuctionProvider>
   );
 }
