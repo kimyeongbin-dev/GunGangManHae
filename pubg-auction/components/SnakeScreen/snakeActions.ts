@@ -53,8 +53,6 @@ export async function drawSnakeLeaders(): Promise<boolean> {
     );
     if (results.find((r) => r.error)) { toast.error('팀장 배정 중 오류가 발생했습니다.'); return false; }
 
-    // 4) 완료 로그 → 모든 접속자에게 방송 토스트로 표시
-    await supabase.from('auction_logs').insert({ message: `스네이크 팀장 추첨: ${tier}티어 16명이 팀장이 되었습니다.` });
     return true;
 }
 

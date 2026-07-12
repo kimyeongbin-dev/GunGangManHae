@@ -72,9 +72,6 @@ export async function drawLeaders() {
     const pinRows = leaders.map((p, i) => ({ team_name: `${i + 1}팀`, p_token: p.p_token, pin: pins[i] }));
     const { error: pinErr } = await supabase.from('leader_pins').insert(pinRows);
     if (pinErr) { toast.error('팀장 PIN 생성 실패: ' + pinErr.message); return; }
-
-    // 6) 완료 로그 → 모든 접속자에게 방송 토스트로 표시 (useRealtimeAuction 구독)
-    await supabase.from('auction_logs').insert({ message: `팀장 추첨 완료 (${TEAM_COUNT}팀)` });
 }
 
 // [진행자] 팀장 해제: 초기화(전원 팀장직 박탈) + 익명 재배정 → 전원 익명 미배정으로 복귀.
@@ -86,5 +83,4 @@ export async function releaseLeaders() {
     if (resetErr) { toast.error('초기화 실패: ' + resetErr.message); return; }
 
     await reassignAnonymous(participants);
-    await supabase.from('auction_logs').insert({ message: '팀장 해제 (전원 익명 참가자로 복귀)' });
 }
