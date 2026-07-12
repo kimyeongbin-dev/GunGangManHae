@@ -47,4 +47,4 @@ export type ModalForm = {
 export const TEAM_COUNT = 16;             // 팀 수 = 팀장 수.
 export const SLOT_COUNT = 64;             // 참가자 슬롯 수 (16열 × 4티어).
 export const TEAM_BUDGET = 10000;         // 팀별 보유 포인트(전 팀 동일). place_bid RPC의 예산 상수와 일치시켜야 함.
-export const AUCTION_DURATION_SEC = 120;  // 경매 1회차 시작 시간(초). 입찰 시 10초룰로 연장됨.
+export const AUCTION_DURATION_SEC = 15;   // 경매 1회차 시작 시간(초). 입찰 시 10초룰로 연장됨.
