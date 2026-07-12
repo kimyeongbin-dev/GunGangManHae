@@ -201,57 +201,55 @@ export default function MainApp() {
             </div>
           ) : (
             <div className={styles.navButtons}>
-              <span className={styles.adminBadge}>
-                진행자 모드 활성화
-              </span>
+              {/* 페이지 이동 탭 (한 그룹). 결과로 넘기면 전원 강제 전환 + 실명 공개. */}
+              <div className={styles.navGroup}>
+                <button
+                  onClick={() => changePageAsAdmin('participants')}
+                  className={`${styles.navBtn} ${hostPage === 'participants' ? styles.active : ''}`}
+                >
+                  참가자
+                </button>
+                <button
+                  onClick={() => changePageAsAdmin('draw')}
+                  className={`${styles.navBtn} ${hostPage === 'draw' ? styles.active : ''}`}
+                >
+                  팀장 추첨
+                </button>
+                <button
+                  onClick={() => changePageAsAdmin('auction')}
+                  className={`${styles.navBtn} ${hostPage === 'auction' ? styles.active : ''}`}
+                >
+                  경매
+                </button>
+                <button
+                  onClick={() => changePageAsAdmin('snake')}
+                  className={`${styles.navBtn} ${hostPage === 'snake' ? styles.active : ''}`}
+                >
+                  스네이크
+                </button>
+                <button
+                  onClick={() => changePageAsAdmin('result')}
+                  className={`${styles.navBtn} ${hostPage === 'result' ? styles.active : ''}`}
+                >
+                  결과
+                </button>
+              </div>
 
-              {/* 익명 표시 토글 & 익명 자동 생성 */}
-              <button
-                onClick={() => setRevealNames((v) => !v)}
-                className={`${styles.headerBtn} ${revealNames ? styles.headerBtnActive : ''}`}
-              >
-                {revealNames ? '실명 보는 중' : '익명 보는 중'}
-              </button>
-              <button onClick={handleRegenAnon} disabled={anonBusy} className={styles.anonBtn}>
-                {anonBusy ? '생성 중…' : '익명 만들기'}
-              </button>
-
-              {/* 화면 전환 (진행자). 결과로 넘기면 전원 강제 전환 + 실명 공개. */}
-              <button
-                onClick={() => changePageAsAdmin('participants')}
-                className={`${styles.navBtn} ${hostPage === 'participants' ? styles.active : ''}`}
-              >
-                참가자
-              </button>
-              <button
-                onClick={() => changePageAsAdmin('draw')}
-                className={`${styles.navBtn} ${hostPage === 'draw' ? styles.active : ''}`}
-              >
-                팀장 추첨
-              </button>
-              <button
-                onClick={() => changePageAsAdmin('auction')}
-                className={`${styles.navBtn} ${hostPage === 'auction' ? styles.active : ''}`}
-              >
-                경매
-              </button>
-              <button
-                onClick={() => changePageAsAdmin('snake')}
-                className={`${styles.navBtn} ${hostPage === 'snake' ? styles.active : ''}`}
-              >
-                스네이크
-              </button>
-              <button
-                onClick={() => changePageAsAdmin('result')}
-                className={`${styles.navBtn} ${hostPage === 'result' ? styles.active : ''}`}
-              >
-                결과
-              </button>
-
-              {/* 모드 해제 버튼 */}
-              <button onClick={handleAdminLogout} className={styles.exitBtn}>
-                모드 해제
-              </button>
+              {/* 진행자 관리 (구분선과 함께 한 덩어리로 이동): 실명/익명 토글 · 익명 재생성 · 모드 해제 */}
+              <div className={styles.toolGroup}>
+                <button
+                  onClick={() => setRevealNames((v) => !v)}
+                  className={`${styles.headerBtn} ${revealNames ? styles.headerBtnActive : ''}`}
+                >
+                  {revealNames ? '실명 보는 중' : '익명 보는 중'}
+                </button>
+                <button onClick={handleRegenAnon} disabled={anonBusy} className={styles.anonBtn}>
+                  {anonBusy ? '생성 중…' : '익명 만들기'}
+                </button>
+                <button onClick={handleAdminLogout} className={styles.exitBtn}>
+                  모드 해제
+                </button>
+              </div>
             </div>
           )}
         </div>
