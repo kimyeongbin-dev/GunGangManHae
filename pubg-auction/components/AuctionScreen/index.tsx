@@ -142,7 +142,7 @@ export default function AuctionScreen({ isAdmin, revealNames }: { isAdmin: boole
 
     return (
         <div className={styles.container}>
-            {/* 좌측: 미배정 참가자 목록 */}
+            {/* 좌측: 참가자 목록 */}
             <UnassignedGrid
                 participants={participants}
                 isAdmin={isAdmin}

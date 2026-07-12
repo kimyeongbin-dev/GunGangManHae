@@ -40,8 +40,10 @@
 /* 방송용 큰 알림 (금색 + 더 큼) */
 .toastAnnounce {
     padding: var(--space-6) 2.75rem; /* 2.75rem = 44px */
+    word-break: keep-all;
     border-color: #ffb300;
     border-width: 3px;
+    overflow-wrap: break-word;
 }
 
 /* 확인 모달 */
@@ -66,8 +68,10 @@
 }
 .msg {
     margin: 0 0 var(--space-5) 0;
+    word-break: keep-all;
     line-height: 1.6;
     white-space: pre-line;
+    overflow-wrap: break-word;
 }
 .btnRow {
     gap: var(--space-2-5);

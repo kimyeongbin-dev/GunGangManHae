@@ -28,7 +28,7 @@ export default function ParticipantsScreen({ isAdmin, revealNames }: { isAdmin: 
     return (
         <div className={styles.wrap}>
             <div className={styles.header}>
-                <h2 className={styles.title}>참가자 ({participants.length}명)</h2>
+                <h2 className={styles.title}>참가자 목록 ({participants.length}명)</h2>
                 <div className={styles.legend}>
                     <div className={styles.legendItem}><div className={`${styles.legendBox} ${styles.legendTier1}`}></div>1티어</div>
                     <div className={styles.legendItem}><div className={`${styles.legendBox} ${styles.legendTier2}`}></div>2티어</div>

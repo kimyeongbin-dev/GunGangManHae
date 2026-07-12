@@ -140,7 +140,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
             {mixedLeaders ? (
                 <div className={styles.notice}>
                     현재 팀장이 경매 방식(여러 티어)으로 구성돼 있어 스네이크 편성을 표시할 수 없습니다.
-                    {isAdmin ? ' 스네이크로 진행하려면 “1. 추첨”에서 “스네이크 팀장 추첨”을 눌러 주세요.' : ''}
+                    {isAdmin ? ' 스네이크로 진행하려면 “팀장 추첨”에서 “스네이크 팀장 추첨”을 눌러 주세요.' : ''}
                 </div>
             ) : (
             <div className={styles.body}>
@@ -148,7 +148,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                 <div className={styles.leftPanel}>
                     <div className={`${fonts.sectionTitle} ${styles.panelTitle}`}>
                         {!leaderTier ? (
-                            <span className={styles.turnHint}>팀장 추첨 전{isAdmin ? ' — “1. 추첨”에서 “스네이크 팀장 추첨”을 누르세요' : ''}</span>
+                            <span className={styles.turnHint}>팀장 추첨 전{isAdmin ? ' — “팀장 추첨”에서 “스네이크 팀장 추첨”을 누르세요' : ''}</span>
                         ) : current ? (
                             <>현재 차례 <b className={styles.turnTeam}>{current.team}</b> · <b>{current.tier}티어</b> <span className={styles.turnHint}>(남은 {remaining}명{isAdmin ? ' · 클릭해 등록' : ''})</span></>
                         ) : (
@@ -189,7 +189,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                     )}
                 </div>
 
-                {/* 가운데: 티어별 초기화 버튼 (팀장 추첨은 “1. 추첨” 화면에서) */}
+                {/* 가운데: 티어별 초기화 버튼 (팀장 추첨은 “팀장 추첨” 화면에서) */}
                 <div className={styles.midPanel}>
                     {isAdmin && leaderTier && (
                         <div className={styles.rerollGroup}>

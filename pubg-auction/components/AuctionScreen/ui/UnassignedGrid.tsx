@@ -1,5 +1,5 @@
 // components/AuctionScreen/ui/UnassignedGrid.tsx
-// [렌더링] 미배정 참가자 목록 (16열 × 4티어 대기석 그리드). 렌더: AuctionScreen(index.tsx) 좌측.
+// [렌더링] 참가자 목록 (16열 × 4티어 대기석 그리드). 렌더: AuctionScreen(index.tsx) 좌측.
 // 셀 클릭 → onCellClick(상세 보기 or 진행자 신규 등록), '수정' 뱃지 → onEditParticipant.
 // realNames가 있으면(진행자 실명모드) 실명, 없으면 익명 표시(participantLabel).
 import styles from '../style.module.css';
@@ -22,7 +22,7 @@ export default function UnassignedGrid({ participants, isAdmin, realNames, onCel
     return (
         <div className={styles.leftPanel}>
             <div className={styles.gridHeader}>
-                <h3 className={`${fonts.sectionTitle} ${styles.gridTitle}`}>미배정 참가자 목록 (16x4 대기석)</h3>
+                <h3 className={`${fonts.sectionTitle} ${styles.gridTitle}`}>참가자 대기석</h3>
                 <div className={styles.gridLegend}>
                     <div className={styles.legendItem}><div className={`${styles.legendBox} ${styles.legendTier1}`}></div>1티어</div>
                     <div className={styles.legendItem}><div className={`${styles.legendBox} ${styles.legendTier2}`}></div>2티어</div>

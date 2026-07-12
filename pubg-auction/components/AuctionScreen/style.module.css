@@ -239,7 +239,7 @@
     background: #e68a00;
 }
 
-/* 우측 하단: 팀 확정 엔트리 현황 */
+/* 우측 하단: 팀 엔트리 현황 */
 .teamListPanel {
     flex: 1;
     border: 1px solid #333;

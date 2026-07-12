@@ -6,8 +6,8 @@
 //  · 결과: 진행자만 이동 가능. 진행자가 결과로 넘기면 page_state='result'가 되어
 //      (1) 전원이 결과 화면으로 강제 전환되고 (2) 서버(result_names RPC)가 실명을 공개한다.
 //  · 즉 page_state(hostPage)는 진행자 전용 — '결과 공개 스위치' + 신규 접속 기본 화면 역할.
-//  · 진행자 인증은 Supabase Auth(이메일+비번). 로그인하면 isAdmin=true(단, 실제 권한은 서버 RLS가 검증).
-//  · 광클 방지: 루트 캡처 단계에서 버튼별 300ms 쓰로틀(모든 버튼 공통).
+//  · 진행자 로그인은 Supabase Auth(이메일+비번). 로그인하면 isAdmin=true(단, 실제 권한은 서버 RLS가 검증).
+//  · 광클 방지: window 캡처 리스너로 버튼별 600ms 쓰로틀(모든 버튼 공통, React 디스패치 전 차단).
 // ---------------------------------------------------------------------------
 import { useState, useEffect } from 'react';
 import styles from './page.module.css';
@@ -122,7 +122,7 @@ export default function MainApp() {
     setHostPage(pageName);
   };
 
-  // 진행자 인증 로직 (Supabase Auth: 서버에서 비밀번호 검증 → JWT 발급)
+  // 진행자 로그인 로직 (Supabase Auth: 서버에서 비밀번호 검증 → JWT 발급)
   const handleAdminLogin = async () => {
     const { error } = await supabase.auth.signInWithPassword({ email: ADMIN_EMAIL, password: adminCode });
     if (error) {
@@ -167,19 +167,19 @@ export default function MainApp() {
                     onClick={() => setLocalView('draw')}
                     className={`${styles.navBtn} ${view === 'draw' ? styles.active : ''}`}
                   >
-                    1. 추첨
+                    팀장 추첨
                   </button>
                   <button
                     onClick={() => setLocalView('auction')}
                     className={`${styles.navBtn} ${view === 'auction' ? styles.active : ''}`}
                   >
-                    2. 경매
+                    경매
                   </button>
                   <button
                     onClick={() => setLocalView('snake')}
                     className={`${styles.navBtn} ${view === 'snake' ? styles.active : ''}`}
                   >
-                    3. 스네이크
+                    스네이크
                   </button>
                 </>
               )}
@@ -188,13 +188,15 @@ export default function MainApp() {
               <div className={styles.loginBox}>
                 <input
                   type="password"
-                  placeholder="진행자 비밀번호"
+                  placeholder="진행자 코드를 입력하세요."
                   value={adminCode}
                   onChange={(e) => setAdminCode(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleAdminLogin(); }}
                   className={styles.input}
                 />
-                <button onClick={handleAdminLogin} className={styles.btn}>진행자 인증</button>
+              </div>
+              <div>
+                <button onClick={handleAdminLogin} className={styles.btn}>로그인</button>
               </div>
             </div>
           ) : (
@@ -225,25 +227,25 @@ export default function MainApp() {
                 onClick={() => changePageAsAdmin('draw')}
                 className={`${styles.navBtn} ${hostPage === 'draw' ? styles.active : ''}`}
               >
-                1. 추첨
+                팀장 추첨
               </button>
               <button
                 onClick={() => changePageAsAdmin('auction')}
                 className={`${styles.navBtn} ${hostPage === 'auction' ? styles.active : ''}`}
               >
-                2. 경매
+                경매
               </button>
               <button
                 onClick={() => changePageAsAdmin('snake')}
                 className={`${styles.navBtn} ${hostPage === 'snake' ? styles.active : ''}`}
               >
-                3. 스네이크
+                스네이크
               </button>
               <button
                 onClick={() => changePageAsAdmin('result')}
                 className={`${styles.navBtn} ${hostPage === 'result' ? styles.active : ''}`}
               >
-                4. 결과
+                결과
               </button>
 
               {/* 모드 해제 버튼 */}

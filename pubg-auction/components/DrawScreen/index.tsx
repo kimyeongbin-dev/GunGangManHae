@@ -62,7 +62,7 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
         <div className={styles.wrap}>
             <div className={styles.header}>
                 <h2 className={styles.title}>
-                    1단계 · 팀장 추첨 <span className={`${fonts.drawCount} ${styles.count}`}>({leaders.length}/{TEAM_COUNT}팀)</span>
+                    팀장 추첨 <span className={`${fonts.drawCount} ${styles.count}`}>({leaders.length}/{TEAM_COUNT}팀)</span>
                 </h2>
                 {isAdmin && (
                     <div className={styles.headerActions}>
