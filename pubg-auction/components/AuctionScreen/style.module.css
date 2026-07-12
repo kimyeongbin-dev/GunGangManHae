@@ -319,9 +319,10 @@
     background: #2b2b2b;
     border-radius: 12px;
 
-    /* 반응형 너비: 기본(이상적) 800px, 창이 좁아지면 92vw까지 줄어듦(창 밖으로 안 넘침) */
-    width: min(800px, 92vw); /* 넓은 화면 800px, 좁아지면 92vw */
-    max-width: 800px; /* 800px보다 커지지 않음 */
+    /* 반응형 너비: 뷰포트 폭에 비례(42vw≈1920에서 800px)해 창이 절반이면 팝업도 절반.
+       최대 800px로 캡, 아주 좁은 화면에선 92vw로 넘침 방지. */
+    width: clamp(300px, 42vw, 800px);
+    max-width: 92vw;
     max-height: 90vh; /* 세로도 화면 안에 */
     overflow-y: auto;
 
@@ -452,7 +453,10 @@
 
 /* ===== 경매 진행 창 (AuctionPanel) 요소 ===== */
 .blockTitle {
+    color: #ff9800;
     margin: 0 0 var(--space-2-5) 0;
+    font-size: 1.5rem;
+    font-weight: bold;
 }
 .waitingText {
     color: #888;
@@ -553,8 +557,10 @@
     justify-content: space-between;
 }
 .logHeaderTitle {
-    color: #aaa;
+    color: #ff9800;
     margin: 0;
+    font-size: 1.5rem;
+    font-weight: bold;
 }
 .clearLogsBtn {
     color: #fff;
@@ -585,7 +591,10 @@
     justify-content: space-between;
 }
 .gridTitle {
+    color: #ff9800;
     margin: 0;
+    font-size: 1.5rem;
+    font-weight: bold;
 }
 .legendTier1 {
     background: #ff9800;
@@ -607,7 +616,10 @@
     justify-content: space-between;
 }
 .teamTitle {
+    color: #ff9800;
     margin: var(--space-1) 0;
+    font-size: 1.5rem;
+    font-weight: bold;
 }
 .resetBtn {
     color: #fff;

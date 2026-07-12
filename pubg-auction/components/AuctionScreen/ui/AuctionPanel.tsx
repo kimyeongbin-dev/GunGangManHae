@@ -80,7 +80,7 @@ export default function AuctionPanel({
         <div className={styles.auctionBoard}>
             {/* [좌측 구역] 참가자 정보 및 입찰 컨트롤 */}
             <div className={styles.auctionLeft}>
-                <h3 className={`${fonts.sectionTitle} ${styles.blockTitle}`}>
+                <h3 className={styles.blockTitle}>
                     {isAdmin ? "경매 진행 제어판" : "경매 진행 창"}
                 </h3>
 
@@ -169,7 +169,7 @@ export default function AuctionPanel({
                 </div>
 
                 <div className={styles.logHeaderRow}>
-                    <h3 className={`${fonts.sectionTitle} ${styles.logHeaderTitle}`}>실시간 경매 로그</h3>
+                    <h3 className={styles.logHeaderTitle}>실시간 경매 로그</h3>
                     {isAdmin && (
                         <button onClick={onClearLogs} className={`${fonts.miniBtn} ${styles.clearLogsBtn}`}>
                             전체 삭제

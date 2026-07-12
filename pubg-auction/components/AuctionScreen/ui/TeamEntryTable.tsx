@@ -34,7 +34,7 @@ export default function TeamEntryTable({ participants, teamPoints, memberPrices,
     return (
         <div className={styles.teamListPanel}>
             <div className={styles.teamHeader}>
-                <h3 className={`${fonts.sectionTitle} ${styles.teamTitle}`}>팀 엔트리 현황</h3>
+                <h3 className={styles.teamTitle}>팀 엔트리 현황</h3>
                 {isAdmin && (
                     <button onClick={onResetAuction} className={`${fonts.smallBtn} ${styles.resetBtn}`}>
                         경매 전체 초기화
