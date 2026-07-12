@@ -2,6 +2,8 @@
 // [렌더링] 참가자 상세 정보 팝업. 렌더: AuctionScreen(index.tsx)에서 viewingToken이 있을 때.
 // 진행자에게는 상황별 액션 노출: 대상 지정(onAssignTarget) / 낙찰 취소(onRevertWin) / 안내.
 // realName이 있으면(진행자 실명모드) 비제이명까지 표시.
+import { useEffect } from 'react';
+import { getState } from '@/lib/toast';
 import styles from '../style.module.css';
 import fonts from '../../typography.module.css';
 import { participantLabel } from '../utils';
@@ -20,6 +22,31 @@ type Props = {
 };
 
 export default function ParticipantDetailModal({ target, isAdmin, realName, auctionRunning, finalPrice, onClose, onAssignTarget, onRevertWin, snakePick }: Props) {
+    // 화면에 실제로 보이는 '주 액션' 버튼(하나만 노출됨): 지명 / 낙찰 취소 / 경매 대상 지정.
+    // 없으면(팀장·진행 중·읽기 전용) Enter는 아무 것도 하지 않는다.
+    const primaryAction = snakePick
+        ? snakePick.onPick
+        : isAdmin && !target.is_leader && target.team_name
+            ? () => onRevertWin(target)
+            : isAdmin && !target.is_leader && !target.team_name && !auctionRunning
+                ? () => onAssignTarget(target)
+                : null;
+
+    // Enter=주 액션 / Esc=닫기. 확인창(confirmDialog)이 떠 있으면 그쪽이 키를 처리하므로 양보한다.
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (getState().confirms.length) return;
+            if (e.key === 'Escape') {
+                onClose();
+            } else if (e.key === 'Enter' && primaryAction) {
+                e.preventDefault();
+                primaryAction();
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [primaryAction, onClose]);
+
     return (
         <div className={styles.modalOverlay} onClick={onClose}>
             <div className={styles.detailModalContent} onClick={(e) => e.stopPropagation()}>
@@ -76,11 +103,12 @@ export default function ParticipantDetailModal({ target, isAdmin, realName, auct
                         </div>
                     ) : target.team_name ? (
                         <>
+                            {/* 스네이크 픽(입찰 없음, 낙찰가 0)은 '지명', 경매 낙찰(낙찰가>0)은 '낙찰'로 구분 표시 */}
                             <div className={`${fonts.detailNote} ${styles.detailNoteBox} ${styles.noteWin}`}>
-                                이미 {target.team_name}에 낙찰됨
+                                이미 {target.team_name}에 {finalPrice > 0 ? '낙찰' : '지명'}됨
                             </div>
                             <button onClick={() => onRevertWin(target)} className={`${fonts.detailActionBtn} ${styles.detailBtn} ${styles.detailBtnRevert}`}>
-                                낙찰 취소
+                                {finalPrice > 0 ? '낙찰 취소' : '지명 취소'}
                             </button>
                         </>
                     ) : auctionRunning ? (

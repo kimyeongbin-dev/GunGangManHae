@@ -1,7 +1,7 @@
 'use client';
 // components/Toaster.tsx
 // toast 스토어를 구독해 토스트 알림 + 확인 모달을 렌더한다. 앱 루트에 한 번만 마운트.
-import { useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { subscribe, getState, dismissToast, resolveConfirm, type ToastKind } from '@/lib/toast';
 import fonts from './typography.module.css';
 import styles from './Toaster.module.css';
@@ -16,6 +16,26 @@ const KIND_CLASS: Record<ToastKind, string> = {
 export default function Toaster() {
     const state = useSyncExternalStore(subscribe, getState, getState);
     const confirm = state.confirms[0]; // 한 번에 하나씩 표시
+
+    // 확인 모달이 떠 있는 동안 Enter=확인 / Esc=취소.
+    // 캡처 단계에서 먼저 처리하고 전파를 막아, 뒤에 있는 입력창(입찰 등)이나 다른 화면의
+    // 키 핸들러(상세/편집 모달)가 같은 키를 함께 처리하지 않도록 한다.
+    useEffect(() => {
+        if (!confirm) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                resolveConfirm(confirm.id, true);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                resolveConfirm(confirm.id, false);
+            }
+        };
+        window.addEventListener('keydown', onKey, true);
+        return () => window.removeEventListener('keydown', onKey, true);
+    }, [confirm]);
 
     return (
         <>

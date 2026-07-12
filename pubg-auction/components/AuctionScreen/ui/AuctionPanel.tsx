@@ -8,7 +8,7 @@ import styles from '../style.module.css';
 import fonts from '../../typography.module.css';
 import { TEAM_BUDGET, AUCTION_DURATION_SEC } from '../types';
 import { formatTime, participantLabel, teamLabel } from '../utils';
-import { toast } from '@/lib/toast';
+import { toast, confirmDialog } from '@/lib/toast';
 import type { Participant, Log } from '../types';
 
 type Props = {
@@ -58,6 +58,12 @@ export default function AuctionPanel({
     const handleBid = async () => {
         const ok = await onBid(parseInt(bidInput));
         if (ok) setBidInput('');
+    };
+
+    // 팀장이 실수로 눌러 입장이 풀리면 PIN을 다시 찾아 입력하는 동안 입찰을 못 하므로 확인창을 둔다.
+    const handleLeaderLogout = async () => {
+        if (!(await confirmDialog('팀장 입장을 해제하시겠습니까?\n다시 입찰하려면 PIN을 다시 입력해야 합니다.'))) return;
+        onLeaderLogout();
     };
 
     const handleLeaderLogin = async () => {
@@ -118,7 +124,7 @@ export default function AuctionPanel({
                         <>
                             <div className={styles.leaderBar}>
                                 <span className={styles.leaderBadge}>{teamLabel(leaderTeam, participants)} 팀장</span>
-                                <button onClick={onLeaderLogout} className={styles.leaderLogoutBtn}>팀장 해제</button>
+                                <button onClick={handleLeaderLogout} className={styles.leaderLogoutBtn}>팀장 해제</button>
                             </div>
                             {tierBlocked && (
                                 <div className={styles.leaderBlocked}>이미 이 티어 팀원이 있어 입찰할 수 없습니다.</div>
@@ -130,6 +136,7 @@ export default function AuctionPanel({
                                 value={bidInput}
                                 onChange={(e) => setBidInput(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && canBid) handleBid(); }}
+                                onWheel={(e) => e.currentTarget.blur()} // 스크롤로 포인트가 바뀌는 실수 방지
                                 disabled={!canBid}
                             />
                             <button onClick={handleBid} className={styles.btnBid} disabled={!canBid}>

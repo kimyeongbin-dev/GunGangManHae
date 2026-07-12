@@ -29,9 +29,19 @@ export default function ParticipantEditModal({ initialForm, masked, onSave, onDe
         if (ok) onClose();
     };
 
+    // Enter=저장 / Esc=취소. 단, 소갯말(textarea)에서 Enter는 줄바꿈이어야 하므로 가로챈다.
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            onClose();
+        } else if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            handleSave();
+        }
+    };
+
     return (
         <div className={styles.modal} onClick={onClose}>
-            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} onKeyDown={handleKeyDown}>
                 <h3>{form.p_token ? '참가자 수정' : '참가자 등록'}</h3>
                 {/* 비밀번호 타입 입력(비제이명 마스킹)이 form 밖에 있으면 크롬이 경고 → form으로 감싼다. */}
                 <form onSubmit={(e) => e.preventDefault()}>

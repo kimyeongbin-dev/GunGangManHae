@@ -32,3 +32,13 @@ body {
 * {
     box-sizing: border-box;
 }
+/* 숫자 입력창의 상하 화살표(스피너) 제거 — 너무 작고, 스크롤·클릭으로 값이 바뀌는 실수를 막는다. */
+input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+}

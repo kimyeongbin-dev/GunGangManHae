@@ -162,22 +162,26 @@ export function useTeamManagement({ participants, auctionBids, auctionTarget, au
         await supabase.from('auction_bids').delete().eq('p_token', auctionTarget.p_token);
     };
 
-    // 낙찰 취소: 팀 배정 해제 + 해당 참가자 입찰 삭제 → 소모 포인트/최고가 복구.
-    // 호출: ParticipantDetailModal(낙찰된 참가자의 '낙찰 취소' 버튼).
+    // 낙찰/지명 취소: 팀 배정 해제 + 해당 참가자 입찰 삭제 → 소모 포인트/최고가 복구.
+    // 호출: ParticipantDetailModal(배정된 참가자의 '낙찰 취소'/'지명 취소' 버튼).
+    // 입찰이 없으면 스네이크 지명 → '지명', 있으면 경매 낙찰 → '낙찰'로 문구를 맞춘다.
     const revertWin = async (participant: Participant): Promise<boolean> => {
         if (!participant.team_name) return false;
+        const isSnake = !auctionBids.some((b) => b.p_token === participant.p_token);
+        const word = isSnake ? '지명' : '낙찰';
+        const detail = isSnake ? '배정이 해제됩니다.' : '배정과 소모 포인트가 되돌아갑니다.';
         if (!(await confirmDialog(
-            `${participant.fake_name}의 낙찰을 취소하시겠습니까?\n${participant.team_name} 배정과 소모 포인트가 되돌아갑니다.`
+            `${participant.fake_name}의 ${word}을 취소하시겠습니까?\n${participant.team_name} ${detail}`
         ))) return false;
 
         const prevTeam = participant.team_name;
         const { error } = await supabase.from('participants')
             .update({ team_name: null }).eq('p_token', participant.p_token);
-        if (error) { toast.error('낙찰 취소 실패: ' + error.message); return false; }
+        if (error) { toast.error(`${word} 취소 실패: ` + error.message); return false; }
 
         await supabase.from('auction_bids').delete().eq('p_token', participant.p_token);
         await supabase.from('auction_logs').insert({
-            message: `낙찰 취소: ${participant.fake_name} (${prevTeam} 배정 해제)`,
+            message: `${word} 취소: ${participant.fake_name} (${prevTeam} 배정 해제)`,
         });
         return true; // 안내는 로그 기반 방송 토스트가 모두에게 표시
     };
