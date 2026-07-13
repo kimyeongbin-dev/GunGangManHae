@@ -204,10 +204,10 @@ export default function MainApp() {
 
         {/* 중앙: 로고 + 제목 (좌우 그룹 폭과 무관하게 가운데 열에 고정) */}
         <div className={styles.brand}>
-          {/* public/건강만해.png. 투명 PNG로 교체하면 코드 수정 없이 바로 반영됨 */}
-          <img src="/건강만해.png" alt="건강만해 로고" className={styles.logo} />
+          {/* public/logo.png. 투명 PNG로 교체하면 코드 수정 없이 바로 반영됨(파일명은 ASCII 유지 — 한글명은 preload Link 헤더에서 ByteString 오류) */}
+          <img src="/logo.png" alt="건강만해 로고" className={styles.logo} />
           <h1 className={styles.title}>건강만해 블라인드 팀 뽑기</h1>
-          <img src="/건강만해.png" alt="건강만해 로고" className={styles.logo} />
+          <img src="/logo.png" alt="건강만해 로고" className={styles.logo} />
         </div>
 
         {/* 우측: 진행자 도구(실명 토글·익명 만들기·모드 해제) 또는 진행자 로그인 */}
