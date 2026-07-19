@@ -68,10 +68,10 @@
     flex-direction: column;
     justify-content: center;
 }
-.filled {
+.clickable {
     cursor: pointer;
 }
-.filled:hover {
+.clickable:hover {
     background: #2f2f2f;
 }
 .tier1 {
@@ -113,4 +113,56 @@
 .addHint {
     color: #666;
     font-size: 0.9rem;
+}
+
+/* 참가자/관전자용 티어별 실명 명단 (이름만 — 딜량·소갯말은 블라인드 유지를 위해 표시하지 않음) */
+.roster {
+    gap: var(--space-4);
+    margin: 0 auto;
+    display: grid;
+    max-width: 1200px;
+    grid-template-columns: repeat(4, 1fr);
+}
+.rosterCol {
+    border: 1px solid #333;
+    padding: var(--space-4);
+    background: #1e1e1e;
+    border-top: 4px solid #555;
+    border-radius: 8px;
+}
+.rosterTier1 {
+    border-top-color: #ff9800;
+}
+.rosterTier2 {
+    border-top-color: #2196f3;
+}
+.rosterTier3 {
+    border-top-color: #4caf50;
+}
+.rosterTier4 {
+    border-top-color: #9e9e9e;
+}
+.rosterTitle {
+    color: #eee;
+    margin: 0 0 var(--space-3) 0;
+    font-size: 1.1rem;
+}
+.rosterCount {
+    color: #888;
+    font-size: 0.85rem;
+    font-weight: normal;
+}
+.rosterList {
+    gap: var(--space-1-5);
+    margin: 0;
+    display: flex;
+    padding: 0;
+    list-style: none;
+    flex-direction: column;
+}
+.rosterName {
+    color: #ddd;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }

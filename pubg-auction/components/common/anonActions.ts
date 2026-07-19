@@ -1,9 +1,10 @@
-// components/AuctionScreen/anonActions.ts
+// components/common/anonActions.ts
 // 익명(fake_name) 재배정 + 동일 티어 내 그리드 슬롯 셔플 로직.
-// 훅이 아닌 독립 함수 → 헤더 버튼(page.tsx)과 추첨/해제(drawActions.ts) 양쪽에서 재사용.
+// 훅이 아닌 독립 함수 → 헤더 버튼(page.tsx)과 팀장 추첨/해제(snakeActions.ts) 양쪽에서 재사용.
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from '@/lib/toast';
 import { generateAnonNames } from './anonNames';
+import { rotateParticipantTokens } from './data';
 import { shuffle } from './utils';
 import type { Participant } from './types';
 
@@ -60,6 +61,10 @@ export async function regenerateAnonymous() {
     if (regenerating) return;
     regenerating = true;
     try {
+        // ★ 먼저 p_token을 갈고(과거 F12 캡처 무효화), 그 다음에 새 토큰으로 조회한다.
+        //   순서를 바꾸면 낡은 토큰으로 update를 날리게 돼 아무 행도 안 맞는다.
+        if (!(await rotateParticipantTokens())) return;
+
         const { data, error } = await supabase.from('participants').select('*');
         if (error) { toast.error('참가자 조회 실패: ' + error.message); return; }
         const participants = (data ?? []) as Participant[];

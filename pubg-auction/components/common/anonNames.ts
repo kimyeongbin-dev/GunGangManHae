@@ -1,9 +1,9 @@
-// components/AuctionScreen/anonNames.ts
+// components/common/anonNames.ts
 // 익명 이름 생성용 단어 풀과 조합기.
 // "무기 × 회복아이템" = 8×8 = 64개 조합 → 참가자 익명(fake_name)으로 사용.
 // 사용처:
 //   · generateAnonNames  → reassignAnonymous(anonActions.ts): 등록/추첨/해제 시 익명 "전체" 재배정.
-//   · pickUnusedAnonName → saveParticipant(useTeamManagement.ts): 신규 참가자 "1명"에게 중복 없는 익명 배정.
+//   · pickUnusedAnonName → saveParticipant(useParticipantCrud.ts): 신규 참가자 "1명"에게 중복 없는 익명 배정.
 import { shuffle } from './utils';
 
 // 필요 시 이 두 목록만 교체하면 익명 테마를 바꿀 수 있다(각 8개 유지 권장).

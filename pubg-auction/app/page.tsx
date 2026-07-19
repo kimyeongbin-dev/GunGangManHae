@@ -1,7 +1,7 @@
 'use client';
 // app/page.tsx
 // ---------------------------------------------------------------------------
-// [SPA 루트] 화면(참가자/추첨/경매/스네이크/결과) 전환.
+// [SPA 루트] 화면(참가자/추첨/스네이크/결과) 전환.
 //  · 모든 접속자가 자기 nav로 자유 이동(로컬, 서로 독립) — 결과도 일반 페이지(강제 이동 없음).
 //  · 실명 공개는 '전체 공개' 스위치로만 발생: 진행자가 결과 페이지의 '전체 실명 공개' 버튼을 누르면
 //      page_state.reveal_until = now+60초 가 되고, 그 시각까지만 result_names() RPC가 전원에게 실명을 반환.
@@ -15,23 +15,22 @@ import type { Session } from '@supabase/supabase-js';
 import styles from './page.module.css';
 import { supabase } from '@/lib/supabaseClient';
 import { toast, confirmDialog } from '@/lib/toast';
-import AuctionScreen from '@/components/AuctionScreen';
 import DrawScreen from '@/components/DrawScreen';
 import ResultScreen from '@/components/ResultScreen';
 import SnakeScreen from '@/components/SnakeScreen';
 import ParticipantsScreen from '@/components/ParticipantsScreen';
-import { RealtimeAuctionProvider } from '@/components/AuctionScreen/hooks/RealtimeAuctionProvider';
-import { regenerateAnonymous } from '@/components/AuctionScreen/anonActions';
+import { RealtimeProvider } from '@/components/common/hooks/RealtimeProvider';
+import { regenerateAnonymous } from '@/components/common/anonActions';
 
 // 화면 종류(모두 로컬 자유 이동).
-type PageView = 'participants' | 'draw' | 'auction' | 'snake' | 'result';
+type PageView = 'participants' | 'draw' | 'snake' | 'result';
 
 // 진행자 계정 이메일 (비밀 아님, 아이디 역할). Supabase Auth 계정 및 SQL is_admin()과 반드시 일치.
 const ADMIN_EMAIL = 'admin@gungang.local';
 const REVEAL_DURATION_MS = 60_000; // '전체 실명 공개'가 유지되는 시간(이후 자동 비공개)
 
 export default function MainApp() {
-  const [view, setView] = useState<PageView>('auction');                // 로컬 화면(모두 자유 이동)
+  const [view, setView] = useState<PageView>('snake');                  // 로컬 화면(모두 자유 이동)
   const [isAdmin, setIsAdmin] = useState(false);                        // 진행자 세션 여부(UI용, 실제 권한은 서버 검증)
   const [adminCode, setAdminCode] = useState('');                      // 진행자 비밀번호 입력값
   const [revealNames, setRevealNames] = useState(false);               // 진행자 개인 실명 토글(자기 화면만)
@@ -189,7 +188,7 @@ export default function MainApp() {
   };
 
   return (
-    <RealtimeAuctionProvider>
+    <RealtimeProvider>
     <div className={styles.container}>
       {/* --- 상단 헤더 & 화면 전환 --- */}
       <header className={styles.header}>
@@ -197,7 +196,6 @@ export default function MainApp() {
         <div className={styles.navGroup}>
           <button onClick={() => setView('participants')} className={`${styles.navBtn} ${view === 'participants' ? styles.active : ''}`}>참가자</button>
           <button onClick={() => setView('draw')} className={`${styles.navBtn} ${view === 'draw' ? styles.active : ''}`}>팀장 추첨</button>
-          <button onClick={() => setView('auction')} className={`${styles.navBtn} ${view === 'auction' ? styles.active : ''}`}>경매</button>
           <button onClick={() => setView('snake')} className={`${styles.navBtn} ${view === 'snake' ? styles.active : ''}`}>스네이크</button>
           <button onClick={() => setView('result')} className={`${styles.navBtn} ${view === 'result' ? styles.active : ''}`}>결과</button>
         </div>
@@ -254,13 +252,12 @@ export default function MainApp() {
       <main className={styles.mainContent}>
         {view === 'participants' && <ParticipantsScreen isAdmin={isAdmin} revealNames={revealNames} />}
         {view === 'draw' && <DrawScreen isAdmin={isAdmin} revealNames={revealNames} />}
-        {view === 'auction' && <AuctionScreen isAdmin={isAdmin} revealNames={revealNames} />}
         {view === 'snake' && <SnakeScreen isAdmin={isAdmin} revealNames={revealNames} />}
         {view === 'result' && (
           <ResultScreen isAdmin={isAdmin} revealNames={revealNames} publicReveal={publicReveal} />
         )}
       </main>
     </div>
-    </RealtimeAuctionProvider>
+    </RealtimeProvider>
   );
 }

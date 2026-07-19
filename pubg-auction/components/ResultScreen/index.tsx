@@ -6,13 +6,13 @@
 //   · '전체 실명 공개' 버튼 = page_state.reveal_until을 now+60초로 → result_names() RPC가 그동안 전원에게 실명 반환.
 //     60초 만료 또는 진행자 모드 해제 시 자동 비공개(블라인드 복귀).
 import { useEffect, useState } from 'react';
-import { useRealtimeAuction } from '../AuctionScreen/hooks/useRealtimeAuction';
-import { useAdminNames } from '../AuctionScreen/hooks/useAdminNames';
-import { TEAM_COUNT } from '../AuctionScreen/types';
-import { participantLabel, teamLabel } from '../AuctionScreen/utils';
-import { fetchResultNames } from '../AuctionScreen/auctionData';
+import { useRealtime } from '../common/hooks/useRealtime';
+import { useAdminNames } from '../common/hooks/useAdminNames';
+import { TEAM_COUNT } from '../common/types';
+import { participantLabel } from '../common/utils';
+import { fetchResultNames } from '../common/data';
 import styles from './style.module.css';
-import type { Participant } from '../AuctionScreen/types';
+import type { Participant } from '../common/types';
 
 // 전체 실명 공개 스위치(버튼)는 상단 헤더 우측(진행자 도구 라인)에 있다 → page.tsx.
 // 여기선 publicReveal(공유 공개 여부)만 받아 이름 표시를 결정한다.
@@ -23,7 +23,7 @@ type Props = {
 };
 
 export default function ResultScreen({ isAdmin, revealNames, publicReveal }: Props) {
-    const { participants } = useRealtimeAuction();
+    const { participants } = useRealtime();
 
     // 진행자 개인 실명(secrets, 진행자만 RLS). 전체 공개 여부와 무관하게 토글로 확인 가능.
     const adminNames = useAdminNames(isAdmin, participants.length);
@@ -74,7 +74,7 @@ export default function ResultScreen({ isAdmin, revealNames, publicReveal }: Pro
                         const members = participants.filter((p) => p.team_name === teamName);
                         return (
                             <tr key={i}>
-                                <td className={`${styles.td} ${styles.teamName}`}>{teamLabel(teamName, participants, displayNames)}</td>
+                                <td className={`${styles.td} ${styles.teamName}`}>{teamName}</td>
                                 <td className={styles.td}>{memberOf(members, '1')}</td>
                                 <td className={styles.td}>{memberOf(members, '2')}</td>
                                 <td className={styles.td}>{memberOf(members, '3')}</td>

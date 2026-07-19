@@ -1,0 +1,261 @@
+/* components/common/ui/modal.module.css
+   참가자 상세 팝업(ParticipantDetailModal)과 등록/수정 모달(ParticipantEditModal)이 함께 쓰는 스타일.
+   경매 화면을 걷어내면서 AuctionScreen/style.module.css에 있던 모달 관련 클래스만 이리로 옮겼다. */
+
+/* ===== 공통: 오버레이 ===== */
+
+/* 상세 팝업 바깥 전체를 감싸는 영역 */
+.modalOverlay {
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    z-index: 9999;
+    position: fixed;
+    background: rgba(0, 0, 0, 0.7);
+    align-items: center;
+    justify-content: center;
+}
+
+/* ===== 참가자 상세 팝업 ===== */
+
+.detailModalContent {
+    padding: var(--space-10);
+    position: relative;
+    background: #2b2b2b;
+    border-radius: 12px;
+
+    /* 반응형 너비: 뷰포트 폭에 비례(42vw≈1920에서 800px)해 창이 절반이면 팝업도 절반.
+       최대 800px로 캡, 아주 좁은 화면에선 92vw로 넘침 방지. */
+    width: clamp(300px, 42vw, 800px);
+    max-width: 92vw;
+    max-height: 90vh; /* 세로도 화면 안에 */
+    overflow-y: auto;
+
+    color: #e0e0e0;
+    border: 1px solid #444;
+    display: flex;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    flex-direction: column;
+
+    /* 가로 삐져나감만 숨김 (세로는 위에서 auto 스크롤) */
+    overflow-x: hidden;
+}
+
+.detailName {
+    color: #ff9800;
+    margin: 0 0 var(--space-2-5) 0;
+}
+
+.introDisplay {
+    color: #fff;
+    margin: var(--space-5) 0;
+    padding: var(--space-5);
+    font-size: var(--fs-intro-display);
+    background: #1a1a1a;
+    font-style: italic;
+    border-left: 4px solid #ff9800;
+    line-height: 1.6;
+
+    /* 텍스트가 영역을 넘어가면 자동으로 줄바꿈 */
+    word-wrap: break-word; /* 긴 단어 강제 줄바꿈 */
+    word-break: break-all; /* 글자 단위로 쪼개기 */
+    white-space: pre-wrap; /* 공백 유지 및 자동 줄바꿈 */
+
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.infoGrid {
+    gap: var(--space-5);
+    display: flex;
+    margin-bottom: var(--space-6);
+    justify-content: center; /* 중앙 정렬 */
+}
+
+.statBadge {
+    color: #fff;
+    padding: var(--space-2) var(--space-5);
+    font-size: var(--fs-stat-badge);
+    background: #444; /* 기본 배경 */
+    font-weight: bold;
+    border-radius: 20px;
+}
+
+/* 티어별 컬러 강조 */
+.tier1Badge {
+    background: #ff9800;
+}
+.tier2Badge {
+    background: #2196f3;
+}
+.tier3Badge {
+    background: #4caf50;
+}
+.tier4Badge {
+    background: #757575;
+}
+
+.badgeTeam {
+    border: 1px solid #4caf50;
+    background: #2e5d34;
+}
+.badgeLeader {
+    border: 1px solid #9c27b0;
+    background: #4a148c;
+}
+.badgeReal {
+    border: 1px solid #555;
+    background: #333;
+}
+
+.detailNoteBox {
+    margin-top: var(--space-2-5);
+    text-align: center;
+}
+.noteLeader {
+    color: #ba68c8;
+}
+.noteWin {
+    color: #4caf50;
+}
+
+.detailBtn {
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    padding: var(--space-3);
+    margin-top: var(--space-2-5);
+    border-radius: 6px;
+}
+.detailBtnAssign {
+    background: #ff9800;
+}
+.detailBtnRevert {
+    background: #f44336;
+}
+
+/* 우측 상단 X 닫기 버튼 */
+.closeButton {
+    top: var(--space-2-5);
+    color: #aaa;
+    right: var(--space-4);
+    border: none;
+    cursor: pointer;
+    position: absolute;
+    font-size: var(--fs-close-btn);
+    background: none;
+}
+.closeButton:hover {
+    color: white;
+}
+
+/* ===== 참가자 등록/수정 모달 ===== */
+
+.modal {
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    z-index: 1000;
+    position: fixed;
+    background: rgba(0, 0, 0, 0.8);
+    align-items: center;
+    justify-content: center;
+}
+.modalContent {
+    width: 90%;
+    border: 1px solid #444;
+    padding: var(--space-6);
+    max-width: 450px;
+    background: #1e1e1e;
+    border-radius: 8px;
+}
+.modalContent h3 {
+    color: #4caf50;
+    margin-top: 0;
+    border-bottom: 1px solid #333;
+    padding-bottom: var(--space-2-5);
+}
+
+.formGroup {
+    gap: var(--space-1-5);
+    display: flex;
+    margin-bottom: var(--space-3);
+    flex-direction: column;
+}
+
+/* 자식 선택자 인식 오류를 해결하기 위해 독립 클래스로 분리 */
+.formInput,
+.formSelect {
+    color: white;
+    border: 1px solid #555;
+    padding: var(--space-2-5);
+    background: #333;
+    border-radius: 4px;
+}
+
+.editLabel {
+    margin-bottom: var(--space-0-5);
+}
+
+/* 비제이명 줄: 입력칸 + (익명 모드일 때) 보기/가리기 토글 */
+.nameFieldRow {
+    gap: var(--space-2);
+    display: flex;
+    align-items: center;
+}
+.nameInput {
+    flex: 1;
+    min-width: 0;
+}
+.revealBtn {
+    color: #ddd;
+    border: 1px solid #555;
+    cursor: pointer;
+    padding: var(--space-2-5) var(--space-3);
+    background: #444;
+    white-space: nowrap;
+    border-radius: 4px;
+}
+
+/* 소갯말: 여러 줄 입력 + 길어지면 세로 스크롤 */
+.formTextarea {
+    font: inherit;
+    color: white;
+    border: 1px solid #555;
+    resize: vertical;
+    padding: var(--space-2-5);
+    background: #333;
+    max-height: 200px;
+    min-height: 5.5rem;
+    overflow-y: auto;
+    line-height: 1.5;
+    border-radius: 4px;
+}
+
+.modalButtons {
+    gap: var(--space-2-5);
+    display: flex;
+    margin-top: var(--space-4);
+}
+.modalButtons button {
+    flex: 1;
+    color: white;
+    border: none;
+    cursor: pointer;
+    padding: var(--space-2-5);
+    font-weight: bold;
+    border-radius: 4px;
+}
+.saveBtn {
+    background: #4caf50;
+}
+.deleteBtn {
+    background: #f44336;
+}
+.cancelBtn {
+    background: #555;
+}

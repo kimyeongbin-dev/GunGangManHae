@@ -1,7 +1,7 @@
-// components/AuctionScreen/ui/ParticipantEditModal.tsx
+// components/common/ui/ParticipantEditModal.tsx
 // [렌더링] 진행자 전용 참가자 등록/수정/삭제 모달 (익명은 '익명 만들기'로 자동 생성)
 import { useState } from 'react';
-import styles from '../style.module.css';
+import styles from './modal.module.css';
 import fonts from '../../typography.module.css';
 import type { ModalForm } from '../types';
 

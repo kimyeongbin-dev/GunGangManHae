@@ -44,7 +44,32 @@
     flex-direction: column;
 }
 
-/* 가운데 버튼 열 (팀장 추첨 + 티어별 초기화) */
+/* 좌측 그리드 위 티어 탭 (누구나 1~4티어 열람) */
+.tierTabs {
+    gap: var(--space-2);
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: var(--space-3);
+}
+.tierTab {
+    color: #ccc;
+    border: 1px solid #555;
+    cursor: pointer;
+    padding: var(--space-1) var(--space-3);
+    background: #262626;
+    white-space: nowrap;
+    border-radius: 999px;
+}
+.tierTab:hover {
+    background: #303030;
+}
+.tierTabActive {
+    color: #fff;
+    background: #4a3a1a;
+    border-color: #ff9800;
+}
+
+/* 가운데 버튼 열 (진행자 도구: 랜덤 배치 · 티어 초기화 · 순서 리롤) */
 .midPanel {
     gap: var(--space-3);
     display: flex;
@@ -57,6 +82,38 @@
     gap: var(--space-2);
     display: flex;
     flex-direction: column;
+}
+
+/* 뽑기 순서 리롤 (티어 초기화 줄에서 팀장 티어 자리를 대신 차지) */
+.toolBtn {
+    color: #eee;
+    border: 1px solid #555;
+    cursor: pointer;
+    padding: var(--space-1-5) var(--space-3);
+    background: #2a2a35;
+    white-space: nowrap;
+    border-radius: 4px;
+}
+.toolBtn:hover:not(:disabled) {
+    background: #343446;
+    border-color: #9c27b0;
+}
+.toolBtn:disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+.fillBtn {
+    color: #1a1a1a;
+    border: none;
+    cursor: pointer;
+    padding: var(--space-1-5) var(--space-3);
+    background: #ff9800;
+    white-space: nowrap;
+    font-weight: bold;
+    border-radius: 4px;
+}
+.fillBtn:hover {
+    background: #e68a00;
 }
 .rerollBtn {
     color: #ddd;

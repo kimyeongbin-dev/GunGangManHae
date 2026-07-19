@@ -1,7 +1,7 @@
-// components/AuctionScreen/utils.ts
+// components/common/utils.ts
 // ---------------------------------------------------------------------------
 // 순수 헬퍼 모음 (부수효과·DB 접근 없음).
-// 경매/추첨/결과 화면 전반에서 공유한다. DB를 건드리는 데이터 접근은 auctionData.ts에 있다.
+// 참가자/추첨/스네이크/결과 화면 전반에서 공유한다. DB를 건드리는 데이터 접근은 data.ts에 있다.
 // ---------------------------------------------------------------------------
 import type { Participant } from './types';
 
@@ -13,7 +13,7 @@ const GRID_COLS = 16;
 
 // 슬롯 인덱스(0~63)로 티어("1"~"4")를 계산한다.
 // 0~15 = 1티어, 16~31 = 2티어, 32~47 = 3티어, 48~63 = 4티어.
-// 사용처: UnassignedGrid(셀별 티어 색), AuctionScreen.handleCellClick(빈 칸 등록 시 티어 결정).
+// 사용처: ParticipantsScreen(진행자 그리드의 셀별 티어, 빈 칸 등록 시 티어 결정).
 export const getTierBySlot = (slotIndex: number): string => {
     const tier = Math.floor(slotIndex / GRID_COLS) + 1; // 행 번호(0~3) → 티어(1~4)
     return tier >= 1 && tier <= 4 ? String(tier) : '1';
@@ -21,7 +21,7 @@ export const getTierBySlot = (slotIndex: number): string => {
 
 // 특정 티어(행)에서 비어 있는 첫 슬롯 인덱스를 반환한다. 자리가 없으면 -1.
 // 티어 T의 슬롯 범위는 (T-1)*16 ~ (T-1)*16 + 15.
-// 사용처: useTeamManagement.saveParticipant(신규 등록/티어 변경 시 자리 배정).
+// 사용처: useParticipantCrud.saveParticipant(신규 등록/티어 변경 시 자리 배정).
 export const firstFreeSlotInTier = (tier: string, occupied: Set<number>): number => {
     const start = (parseInt(tier) - 1) * GRID_COLS;
     for (let i = start; i < start + GRID_COLS; i++) {
@@ -38,34 +38,16 @@ export const firstFreeSlotInTier = (tier: string, occupied: Set<number>): number
 //      · realName 이 없으면(=undefined) 실명을 볼 권한/상황이 아니라는 뜻.
 //  - 우선순위: realName(권한 있는 실명) → reveal_name(팀장/공개 대상) → fake_name(블라인드).
 //  - 팀장은 항상 "…(팀장)" 접미사.
-// 사용처: UnassignedGrid, AuctionPanel, TeamEntryTable, ParticipantDetailModal, ResultScreen.
+// 사용처: SnakeScreen, ResultScreen, ParticipantDetailModal.
 export const participantLabel = (p: Participant, realName?: string): string => {
     const shown = realName ?? p.reveal_name ?? p.fake_name ?? '?';
     return p.is_leader ? `${shown}(팀장)` : shown;
 };
 
-// 팀 표시 이름: "비제이명팀-N팀" (팀장이 없으면 그냥 "N팀").
-// realNames: participantLabel 과 동일하게, 팀장을 실명으로 보여줄 수 있을 때만 전달된다.
-// 사용처: TeamEntryTable(팀명 열), AuctionPanel(팀장 입장 뱃지), ResultScreen(팀명 열).
-export const teamLabel = (teamName: string, participants: Participant[], realNames?: Record<string, string>): string => {
-    const leader = participants.find((p) => p.is_leader && p.team_name === teamName);
-    if (!leader) return teamName;
-    const name = realNames?.[leader.p_token] ?? leader.reveal_name ?? leader.fake_name;
-    return `${name}팀-${teamName}`;
-};
-
 // ── 기타 ────────────────────────────────────────────────────────────────
 
-// 남은 초 → "mm:ss" 문자열. 사용처: AuctionPanel 타이머 표시.
-export const formatTime = (totalSeconds: number): string => {
-    const s = Math.max(0, Math.floor(totalSeconds));
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-};
-
 // 배열을 제자리(in-place) Fisher-Yates 로 섞고 그 배열을 반환한다.
-// 사용처: generateAnonNames(익명 조합), reassignAnonymous(티어 내 슬롯), drawLeaders(팀장 선정).
+// 사용처: generateAnonNames(익명 조합), reassignAnonymous(티어 내 슬롯), 팀장 추첨/순서 리롤/랜덤 배치.
 export const shuffle = <T>(arr: T[]): T[] => {
     for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -75,7 +57,7 @@ export const shuffle = <T>(arr: T[]): T[] => {
 };
 
 // DB 행 배열을 { key: value } 맵으로 변환한다. (key/val 접근자를 받아 타입 안전)
-// 사용처: auctionData.ts 의 실명/PIN 조회 헬퍼들이 "행 → 맵" 변환에 공유.
+// 사용처: data.ts 의 실명 조회 헬퍼들이 "행 → 맵" 변환에 공유.
 export const rowsToMap = <T>(
     rows: T[] | null | undefined,
     key: (row: T) => string,
