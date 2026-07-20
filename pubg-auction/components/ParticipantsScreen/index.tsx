@@ -151,12 +151,17 @@ export default function ParticipantsScreen({ isAdmin, revealNames }: { isAdmin: 
                         const names = roster.filter((r) => r.tier === tier);
                         return (
                             <section key={tier} className={`${styles.rosterCol} ${styles[`rosterTier${tier}`]}`}>
-                                <h3 className={styles.rosterTitle}>{tier}티어 <span className={styles.rosterCount}>({names.length}명)</span></h3>
-                                <ul className={styles.rosterList}>
+                                <h3 className={styles.rosterTitle}>
+                                    <span className={styles.rosterTierNum}>{tier}</span>
+                                    <span className={styles.rosterTierLabel}>티어</span>
+                                    <span className={styles.rosterCount}>{names.length}명</span>
+                                </h3>
+                                <ol className={styles.rosterList}>
                                     {names.map((r) => (
                                         <li key={r.real_name} className={styles.rosterName}>{r.real_name}</li>
                                     ))}
-                                </ul>
+                                    {names.length === 0 && <li className={styles.rosterEmpty}>등록된 참가자가 없습니다</li>}
+                                </ol>
                             </section>
                         );
                     })}

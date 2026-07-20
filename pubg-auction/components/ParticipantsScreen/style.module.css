@@ -4,7 +4,9 @@
     padding: var(--space-5);
 }
 .header {
+    gap: var(--space-2) var(--space-4);
     display: flex;
+    flex-wrap: wrap; /* 좁은 화면에서 제목과 범례가 겹치지 않고 줄바꿈되도록 */
     align-items: baseline;
     margin-bottom: var(--space-4);
     justify-content: space-between;
@@ -17,6 +19,7 @@
     gap: var(--space-4);
     color: #aaa;
     display: flex;
+    flex-wrap: wrap;
     font-size: 0.8rem;
 }
 .legendItem {
@@ -115,54 +118,119 @@
     font-size: 0.9rem;
 }
 
-/* 참가자/관전자용 티어별 실명 명단 (이름만 — 딜량·소갯말은 블라인드 유지를 위해 표시하지 않음) */
+/* 참가자/관전자용 티어별 실명 명단 (이름만 — 딜량·소갯말은 블라인드 유지를 위해 표시하지 않음).
+   카드 하나 폭을 220~280px로 제한해 넓은 화면에서 과하게 퍼지지 않게 하고, 가운데 정렬한다.
+   auto-fit + minmax 로 화면이 좁아지면 4→3→2→1열로 자동으로 접힌다(반응형). */
 .roster {
     gap: var(--space-4);
     margin: 0 auto;
     display: grid;
-    max-width: 1200px;
-    grid-template-columns: repeat(4, 1fr);
+    max-width: 1120px;
+    align-items: start;
+    justify-content: center;
+    grid-template-columns: repeat(4, minmax(200px, 260px));
 }
+@media (max-width: 900px) {
+    .roster {
+        grid-template-columns: repeat(2, minmax(200px, 300px));
+    }
+}
+@media (max-width: 480px) {
+    .roster {
+        grid-template-columns: minmax(0, 340px);
+    }
+}
+/* 티어 카드 — 위쪽에 티어 색 띠, 은은한 그라데이션 + 그림자 */
 .rosterCol {
-    border: 1px solid #333;
-    padding: var(--space-4);
-    background: #1e1e1e;
-    border-top: 4px solid #555;
-    border-radius: 8px;
+    /* 티어별 강조색을 변수로 받아 제목·번호·띠가 함께 쓴다(모디파이어가 덮어씀) */
+    --tier: #9e9e9e;
+    border: 1px solid #2e2e2e;
+    padding: var(--space-4) var(--space-4) var(--space-2);
+    background: linear-gradient(180deg, #232323 0%, #1a1a1a 100%);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    border-top: 3px solid var(--tier);
+    border-radius: 12px;
 }
 .rosterTier1 {
-    border-top-color: #ff9800;
+    --tier: #ff9800;
 }
 .rosterTier2 {
-    border-top-color: #2196f3;
+    --tier: #2196f3;
 }
 .rosterTier3 {
-    border-top-color: #4caf50;
+    --tier: #4caf50;
 }
 .rosterTier4 {
-    border-top-color: #9e9e9e;
+    --tier: #9e9e9e;
 }
+
+/* 카드 제목: "4 티어 · 16명" — 티어 숫자를 크게 색으로 강조 */
 .rosterTitle {
-    color: #eee;
+    gap: var(--space-2);
     margin: 0 0 var(--space-3) 0;
-    font-size: 1.1rem;
+    display: flex;
+    align-items: baseline;
+    border-bottom: 1px solid #2e2e2e;
+    padding-bottom: var(--space-2-5);
+}
+.rosterTierNum {
+    color: var(--tier);
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+.rosterTierLabel {
+    color: #ccc;
+    font-size: 1rem;
+    font-weight: 600;
 }
 .rosterCount {
-    color: #888;
-    font-size: 0.85rem;
-    font-weight: normal;
+    color: #7a7a7a;
+    font-size: 0.8rem;
+    margin-left: auto;
+    font-weight: 500;
 }
+
+/* 이름 목록: 번호가 붙은 행. CSS 카운터로 자동 번호 매김 */
 .rosterList {
-    gap: var(--space-1-5);
     margin: 0;
-    display: flex;
     padding: 0;
     list-style: none;
-    flex-direction: column;
+    counter-reset: roster;
 }
 .rosterName {
-    color: #ddd;
+    gap: var(--space-2-5);
+    color: #e8e8e8;
+    display: flex;
+    padding: var(--space-2) var(--space-1);
     overflow: hidden;
+    font-size: 1.05rem;
+    transition: background 0.12s ease;
+    align-items: center;
     white-space: nowrap;
+    border-radius: 6px;
     text-overflow: ellipsis;
+}
+.rosterName:not(:last-child) {
+    border-bottom: 1px solid #262626;
+}
+.rosterName::before {
+    color: #666;
+    content: counter(roster);
+    min-width: 1.4em;
+    font-size: 0.8rem;
+    text-align: right;
+    counter-increment: roster;
+    font-variant-numeric: tabular-nums;
+}
+.rosterName:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+.rosterEmpty {
+    color: #666;
+    padding: var(--space-3) 0;
+    font-size: 0.9rem;
+    font-style: italic;
+    text-align: center;
 }
