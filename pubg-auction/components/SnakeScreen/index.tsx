@@ -10,17 +10,17 @@
 //   · ★ 진행 티어(active_tier)는 공유된다 — 진행자가 고른 티어가 곧 '지금 뽑는 티어'이고,
 //     그래야 편성표의 '지명 대기'가 전원에게 같은 칸으로 보인다.
 //     참가자는 그와 별개로 좌측 탭에서 아무 티어나 자유롭게 열람할 수 있다(로컬 보기).
-//   · 지그재그 방향은 '이미 다 찬 티어 수'로 계산돼 저장이 필요 없다 — snakeOrder.ts 참고.
+//   · 지그재그 방향은 page_state.draft_order(뽑은 순번 기록)로 정해진다 — snakeOrder.ts 참고.
 //   · 순서를 바꾸고 싶으면 '뽑기 순서 리롤'로 팀 번호를 통째로 재배열한다(뽑힌 팀원도 함께 이동).
 //
 // ★ 동시성(중복 등록 방지):
-//   · lockRef : 등록/취소를 한 번에 하나씩만 처리(연타로 여러 명이 같은 칸에 배정돼 사라지는 문제 차단).
-//     React state는 클로저가 옛 값을 보므로 동기 ref로 잠근다.
+//   · 판을 바꾸는 모든 조작은 actionLock 의 전역 잠금을 공유한다(snakeActions.ts).
 //   · optimistic : 방금 누른 픽을 실시간 수신 전에 화면에 즉시 반영 → 풀에서 바로 사라지고 차례가 전진.
-//     participants(서버 실측)가 따라잡으면 cleanup 훅이 항목을 비운다.
+//     서버 실측이 따라잡거나 유효기간이 지나면 비운다. ★ '값이 일치할 때만' 지우면, 다른 진행자가
+//     그 사이 초기화했을 때 내 화면에만 유령 배정이 영구히 남는다 → 유효기간을 함께 둔다.
 // 렌더 위치: page.tsx의 view==='snake'.
 // ---------------------------------------------------------------------------
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRealtime } from '../common/hooks/useRealtime';
 import { useAdminNames } from '../common/hooks/useAdminNames';
 import { TEAM_COUNT } from '../common/types';
@@ -32,63 +32,89 @@ import styles from './style.module.css';
 import { ALL_TIERS, remainingTiers, memberAt, currentTeamFor, isTierDone } from './snakeOrder';
 import {
     assignSnakePick, cancelSnakePick, resetSnakeTier, fillTierRandomly,
-    rerollTeamOrder, fetchActiveTier, saveActiveTier,
+    rerollTeamOrder, fetchDraftState, saveActiveTier,
 } from './snakeActions';
 import ParticipantDetailModal from '../common/ui/ParticipantDetailModal';
+import { clickable } from '../common/a11y';
+import { useActionBusy } from '../common/actionLock';
 import type { Participant } from '../common/types';
+
+// 낙관적 반영을 유지하는 최대 시간. 서버 왕복이 이보다 오래 걸리면 잠깐 되돌아 보이지만,
+// 영구히 어긋난 채 남는 것보다 낫다(서버 실측이 항상 최종 진실).
+const OPTIMISTIC_TTL_MS = 5000;
 
 export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean; revealNames: boolean }) {
     const { participants } = useRealtime();
+    const busy = useActionBusy(); // 판을 바꾸는 긴 작업(추첨·초기화·랜덤배치·리롤)이 도는 중인가
     const showReal = isAdmin && revealNames; // 실명(비제이명) 표시 여부
-    const adminNames = useAdminNames(isAdmin, participants.length);
+    const [adminNames] = useAdminNames(isAdmin, participants);
     const displayNames = showReal ? adminNames : undefined;
     const nameOf = (p: Participant) => participantLabel(p, displayNames?.[p.p_token]);
 
-    // 낙관적 배정 오버레이 { p_token: team_name | null }. null = 방금 취소(미배정 강제).
-    // 실시간 수신 전 화면에 먼저 반영하고, 서버가 따라잡으면 아래 effect가 비운다.
-    const [optimistic, setOptimistic] = useState<Record<string, string | null>>({});
+    // 낙관값: { p_token: { team, at } }. team=null 은 방금 취소(미배정 강제). at=설정 시각.
+    // 실시간 수신 전 화면에 먼저 반영하고, 서버가 따라잡거나 유효기간이 지나면 아래 effect가 비운다.
+    const [optimistic, setOptimistic] = useState<Record<string, { team: string | null; at: number }>>({});
     const [viewingToken, setViewingToken] = useState<string | null>(null); // 상세 팝업 대상(그리드 셀 클릭)
     const [viewTier, setViewTier] = useState<string | null>(null);         // 내가 보고 있는 티어(로컬 열람)
     const [activeTier, setActiveTier] = useState<string | null>(null);     // 지금 뽑는 티어(진행자가 정해 공유)
-    const lockRef = useRef(false); // 등록/취소 직렬화(동기 잠금)
+    const [draftOrder, setDraftOrder] = useState<string[]>([]);            // 뽑은 순번(지그재그 방향의 근거)
 
-    // 진행 티어 구독: 진행자가 티어 탭을 바꾸면 전원의 '지명 대기' 표시가 함께 움직인다.
-    // ★ 구독 콜백은 activeTier(=차례)만 갱신하고 viewTier(=내가 보는 화면)는 건드리지 않는다.
+    // 진행 상태 구독: 진행 티어와 뽑은 순번을 전원이 같이 본다.
+    // ★ 구독 콜백은 공유 상태만 갱신하고 viewTier(=내가 보는 화면)는 건드리지 않는다.
     //   진행자가 티어를 옮겼다고 남의 그리드까지 갈아치우면, 보고 있던 참가자 화면이 갑자기 바뀐다.
     //   최초 진입 때만 내 그리드를 그때의 진행 티어에 맞춰 두고, 이후로는 각자 탭으로 정한다.
     useEffect(() => {
-        fetchActiveTier().then((t) => {
-            setActiveTier(t);
-            if (t) setViewTier((v) => v ?? t); // 첫 로드 1회에 한해 맞춤(이미 고른 게 있으면 존중)
+        let alive = true;
+        const apply = (s: { activeTier: string | null; draftOrder: string[] }) => {
+            if (!alive) return;
+            setActiveTier(s.activeTier);
+            setDraftOrder(s.draftOrder);
+        };
+        fetchDraftState().then((s) => {
+            if (!alive) return;
+            apply(s);
+            if (s.activeTier) setViewTier((v) => v ?? s.activeTier); // 첫 로드 1회에 한해 맞춤
         });
         const channel = supabase
-            .channel('active_tier_changes')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_state' },
-                (payload) => setActiveTier((payload.new as { active_tier: string | null }).active_tier ?? null),
-            )
-            .subscribe();
-        return () => { supabase.removeChannel(channel); };
+            .channel('draft_state_changes')
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_state' }, (payload) => {
+                const row = payload.new as { active_tier: string | null; draft_order: string[] | null };
+                apply({ activeTier: row.active_tier ?? null, draftOrder: row.draft_order ?? [] });
+            })
+            .subscribe((status) => { if (status === 'SUBSCRIBED') fetchDraftState().then(apply); });
+        return () => { alive = false; supabase.removeChannel(channel); };
     }, []);
 
-    // 서버 실측이 낙관값을 반영하면 해당 항목 제거(안 그러면 취소가 안 먹는 등 stale 발생).
-    useEffect(() => {
+    // 낙관값 정리. 서버가 같은 값으로 따라잡았거나, 유효기간(5초)이 지났으면 버린다.
+    // ★ '값이 일치할 때만' 지우면 다른 진행자가 그 사이 초기화했을 때(서버가 제3의 값이 됨)
+    //   항목이 영구히 남아 내 화면에만 유령 배정이 생긴다. 그래서 시간 만료를 함께 둔다.
+    // ★ 이 정리는 participants 변경뿐 아니라 '시간 경과'로도 일어나야 한다 — 마지막 변경 이후
+    //   아무 이벤트가 없으면 만료 항목이 안 지워지므로, 낙관값이 남아 있는 동안 짧은 타이머를 돌린다.
+    const purgeOptimistic = () => {
         setOptimistic((prev) => {
-            const next = { ...prev };
+            const now = Date.now();
+            const next: typeof prev = {};
             let changed = false;
-            for (const token of Object.keys(prev)) {
+            for (const [token, v] of Object.entries(prev)) {
                 const real = participants.find((p) => p.p_token === token);
-                if (real && (real.team_name ?? null) === prev[token]) {
-                    delete next[token];
-                    changed = true;
-                }
+                const settled = real && (real.team_name ?? null) === v.team;
+                const expired = now - v.at > OPTIMISTIC_TTL_MS;
+                if (settled || expired || !real) { changed = true; continue; }
+                next[token] = v;
             }
             return changed ? next : prev;
         });
-    }, [participants]);
+    };
+    useEffect(purgeOptimistic, [participants]);
+    useEffect(() => {
+        if (Object.keys(optimistic).length === 0) return;
+        const id = setInterval(purgeOptimistic, 1000);
+        return () => clearInterval(id);
+    }, [optimistic]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 낙관값을 얹은 실효 참가자 목록. 모든 파생 계산은 이걸 기준으로 한다.
     const merged = participants.map((p) =>
-        p.p_token in optimistic ? { ...p, team_name: optimistic[p.p_token] } : p,
+        p.p_token in optimistic ? { ...p, team_name: optimistic[p.p_token].team } : p,
     );
     const viewingTarget = merged.find((p) => p.p_token === viewingToken) ?? null;
 
@@ -106,7 +132,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
     const activeUsable = activeTier && rest.includes(activeTier) && !isTierDone(merged, activeTier);
     const turnTier = (activeUsable ? activeTier : null) ?? firstUnfinished ?? null;
     // 그 티어의 현재 차례 팀 = 순서상 아직 비어 있는 첫 칸. 전원에게 같은 값이다.
-    const currentTeam = leaderTier && turnTier ? currentTeamFor(merged, leaderTier, turnTier) : null;
+    const currentTeam = leaderTier && turnTier ? currentTeamFor(merged, draftOrder, turnTier) : null;
 
     // 좌측 그리드에 표시할 티어. 내가 탭으로 고른 티어가 최우선.
     // ★ 아직 안 골랐을 때의 기본값이 turnTier면 안 된다 — 진행자가 티어를 옮길 때마다 남의 그리드가
@@ -137,31 +163,26 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
         if (isAdmin && tier !== leaderTier && tier !== activeTier) await saveActiveTier(tier);
     };
 
-    // [진행자] 지명: 현재 차례 팀에 배정. lockRef로 한 번에 하나만 처리(연타 방지).
+    // [진행자] 지명: 현재 차례 팀에 배정. 서버 RPC 가 배정과 '뽑은 순번' 기록을 한 트랜잭션으로 처리한다.
     const handlePick = async (p: Participant) => {
-        if (!isAdmin || lockRef.current || !currentTeam || p.tier !== turnTier || p.team_name || p.is_leader) return;
-        lockRef.current = true;
-        setOptimistic((o) => ({ ...o, [p.p_token]: currentTeam })); // 즉시 반영
+        if (!isAdmin || !currentTeam || p.tier !== turnTier || p.team_name || p.is_leader) return;
+        setOptimistic((o) => ({ ...o, [p.p_token]: { team: currentTeam, at: Date.now() } })); // 즉시 반영
         const ok = await assignSnakePick(p.p_token, currentTeam);
         if (!ok) setOptimistic((o) => { const n = { ...o }; delete n[p.p_token]; return n; }); // 실패 시 롤백
-        lockRef.current = false;
     };
 
-    // [진행자] 지명 취소(편성표 × · 상세 팝업 버튼 공용). 확인 후 직렬화 + 즉시 반영.
-    // 확인창은 잠금을 잡기 전에 띄운다 — 응답을 기다리는 동안 다른 조작까지 묶이면 안 되기 때문.
+    // [진행자] 지명 취소(편성표 × · 상세 팝업 버튼 공용).
+    // ★ 취소해도 '뽑은 순번'은 그대로 둔다 → 진행 중 티어의 지그재그 방향이 소급해 뒤집히지 않는다.
     const handleCancel = async (p: Participant) => {
-        if (!isAdmin || lockRef.current) return;
+        if (!isAdmin) return;
         const team = p.team_name;
         if (!(await confirmDialog(`${nameOf(p)}의 지명을 취소할까요?\n${team} 배정이 해제됩니다.`))) return;
-        if (lockRef.current) return; // 확인을 기다리는 사이 다른 작업이 잠금을 잡았을 수 있다
-        lockRef.current = true;
-        setOptimistic((o) => ({ ...o, [p.p_token]: null }));
+        setOptimistic((o) => ({ ...o, [p.p_token]: { team: null, at: Date.now() } }));
         const ok = await cancelSnakePick(p.p_token);
         if (!ok) setOptimistic((o) => { const n = { ...o }; delete n[p.p_token]; return n; });
-        lockRef.current = false;
     };
 
-    // [진행자] 티어별 초기화: 그 티어에서 뽑은 픽을 모두 되돌린다.
+    // [진행자] 티어별 초기화: 그 티어에서 뽑은 픽을 모두 되돌리고 뽑은 순번에서도 제거한다.
     const handleResetTier = async (tier: string) => {
         if (!(await confirmDialog(`${tier}티어에 배정된 팀원을 모두 초기화할까요?`))) return;
         setOptimistic({});
@@ -173,7 +194,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
     const handleFillRandomly = async (tier: string) => {
         if (!(await confirmDialog(`${tier}티어 16명을 무작위로 배치할까요?\n이미 지명된 팀원도 모두 다시 섞입니다(다시 누르면 또 섞임).`))) return;
         setOptimistic({});
-        await fillTierRandomly(tier, merged);
+        await fillTierRandomly(tier);
     };
 
     // [진행자] 뽑기 순서 리롤: 팀 번호를 통째로 재배열한다.
@@ -184,7 +205,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
             : '뽑기 순서를 다시 섞을까요?\n누가 먼저 뽑는지가 바뀝니다.';
         if (!(await confirmDialog(msg))) return;
         setOptimistic({});
-        await rerollTeamOrder(merged);
+        await rerollTeamOrder();
     };
 
     // [진행자] 상세 팝업의 '지명' → 현재 차례 팀에 배정하고 팝업 닫기(그리드 직접 클릭 대신 2단계로 실수 방지).
@@ -258,7 +279,8 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                         <div className={styles.tierGrid}>
                             {tierPool.map((p) => {
                                 const available = !p.team_name;
-                                const pickable = isAdmin && available && !!currentTeam && viewingTurnTier; // 지금 뽑는 티어에서만 지명
+                                // 긴 작업(busy) 중에는 지명을 막는다 — 조용히 씹히지 않도록 클릭 시 상세만 열린다.
+                                const pickable = isAdmin && available && !!currentTeam && viewingTurnTier && !busy;
                                 const cellClass = [
                                     styles.cell,
                                     styles[`cellTier${gridTier}`],
@@ -269,11 +291,13 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                                     <div
                                         key={p.p_token}
                                         className={cellClass}
-                                        onClick={() => setViewingToken(p.p_token)}
                                         title={available ? '' : `${nameOf(p)} → ${p.team_name}`}
+                                        {...clickable(() => setViewingToken(p.p_token),
+                                            `${nameOf(p)} 상세 보기${available ? '' : ` (${p.team_name} 배정됨)`}`)}
                                     >
                                         <span className={styles.cellName}>{nameOf(p)}</span>
-                                        <span className={styles.cellDmg}>{p.avg_damage}</span>
+                                        {/* 팀장은 딜량이 가려진다(0008) — 뽑는 대상이 아니라 필요도 없다 */}
+                                        <span className={styles.cellDmg}>{p.avg_damage ?? '—'}</span>
                                         {!available && <span className={styles.cellTeam}>{p.team_name}</span>}
                                     </div>
                                 );
@@ -288,25 +312,27 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                     )}
                 </div>
 
-                {/* 가운데: 진행자 도구 (티어 랜덤 배치 · 티어별 초기화 / 팀장 티어 자리는 순서 리롤) */}
+                {/* 가운데: 진행자 도구 (티어 랜덤 배치 · 티어별 초기화 / 팀장 티어 자리는 순서 리롤).
+                    긴 작업이 도는 동안(busy) 버튼을 잠가 이중 실행과 '씹힘'을 막는다. */}
                 <div className={styles.midPanel}>
                     {isAdmin && leaderTier && (
                         <>
+                            {busy && <div className={styles.busyHint}>처리 중…</div>}
                             {gridTier && gridTier !== leaderTier && (
-                                <button onClick={() => handleFillRandomly(gridTier)} className={styles.fillBtn}>
+                                <button onClick={() => handleFillRandomly(gridTier)} disabled={busy} className={styles.fillBtn}>
                                     {gridTier}티어 랜덤 배치
                                 </button>
                             )}
 
-                            <div className={styles.rerollGroup}>
+                            <div className={styles.midBtnGroup}>
                                 {ALL_TIERS.map((t) => (
                                     // 팀장 티어는 초기화 대상이 아니므로, 그 자리를 '뽑기 순서 리롤'로 쓴다.
                                     t === leaderTier ? (
-                                        <button key={t} onClick={handleRerollOrder} className={styles.toolBtn}>
+                                        <button key={t} onClick={handleRerollOrder} disabled={busy} className={styles.rerollBtn}>
                                             뽑기 순서 리롤
                                         </button>
                                     ) : (
-                                        <button key={t} onClick={() => handleResetTier(t)} className={styles.rerollBtn}>
+                                        <button key={t} onClick={() => handleResetTier(t)} disabled={busy} className={styles.tierResetBtn}>
                                             {t}티어 초기화
                                         </button>
                                     )
@@ -350,7 +376,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                                                 return (
                                                     <td key={tier} className={`${styles.td} ${styles.leaderCell}`}>
                                                         {leader ? (
-                                                            <span className={styles.nameLink} onClick={() => setViewingToken(leader.p_token)}>{nameOf(leader)}</span>
+                                                            <span className={styles.nameLink} {...clickable(() => setViewingToken(leader.p_token), `${nameOf(leader)} 상세 보기`)}>{nameOf(leader)}</span>
                                                         ) : ''}
                                                     </td>
                                                 );
@@ -363,7 +389,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                                                 <td key={tier} className={`${styles.td} ${isTurn ? styles.turnCell : ''}`}>
                                                     {member ? (
                                                         <>
-                                                            <span className={`${styles.pickName} ${styles.nameLink}`} onClick={() => setViewingToken(member.p_token)}>{nameOf(member)}</span>
+                                                            <span className={`${styles.pickName} ${styles.nameLink}`} {...clickable(() => setViewingToken(member.p_token), `${nameOf(member)} 상세 보기`)}>{nameOf(member)}</span>
                                                             {isAdmin && (
                                                                 <button
                                                                     onClick={() => handleCancel(member)}

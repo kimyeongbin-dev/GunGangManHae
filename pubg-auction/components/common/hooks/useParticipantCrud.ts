@@ -61,8 +61,19 @@ export function useParticipantCrud(participants: Participant[]) {
             avg_damage: parseInt(avg_damage), intro, reveal_name: null,
         });
         if (error) { toast.error('저장 에러: ' + error.message); return false; }
+
+        // ★ 두 테이블 insert 는 한 트랜잭션이 아니다. 실명 저장이 실패했는데 participants 행을
+        //   그대로 두면 '실명 없는 유령 참가자'가 남고, 진행자가 다시 저장을 누르면 신규 경로를
+        //   또 타서 다른 슬롯에 중복 등록된다(티어 17명이 되어 팀장 추첨 자체가 막힌다).
+        //   그래서 실패 시 방금 만든 행을 되돌린다.
         const { error: sErr } = await supabase.from('participant_secrets').insert({ p_token: newToken, real_name });
-        if (sErr) { toast.error('실명 저장 에러: ' + sErr.message); return false; }
+        if (sErr) {
+            const { error: rbErr } = await supabase.from('participants').delete().eq('p_token', newToken);
+            toast.error(rbErr
+                ? `실명 저장 에러: ${sErr.message}\n되돌리기도 실패했습니다. 참가자 목록을 확인해 주세요.`
+                : '실명 저장 에러: ' + sErr.message);
+            return false;
+        }
         return true;
     };
 

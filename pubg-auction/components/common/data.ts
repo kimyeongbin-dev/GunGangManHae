@@ -9,59 +9,17 @@
 //   · fetchRosterNames() : roster_names() RPC. 전원에게 (티어, 실명)만 반환 — p_token이 없어 익명 카드와 매칭 불가.
 //   · participants 테이블에는 real_name 컬럼이 없다(공개 컬럼 reveal_name은 팀장만 채워짐).
 //   → 따라서 이 파일이 "실명이 클라이언트로 흘러나가는 유일한 통로"이며, 그 통로는 전부 서버(RLS/RPC)가 게이팅한다.
+//
+// ★ 판을 바꾸는 쓰기는 여기 없다 — 전부 원자적 RPC(snakeActions.ts)로 옮겼다.
+//   여러 행을 나눠 PATCH 하던 방식은 중간 실패 시 절반만 반영돼 슬롯이 겹치는 사고를 냈다.
 // ---------------------------------------------------------------------------
-import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabaseClient';
-import { toast } from '@/lib/toast';
 import { rowsToMap } from './utils';
-
-// ── 식별자 회전 (블라인드 유지의 핵심) ─────────────────────────────────────
-
-// [진행자] 전 참가자에게 새 p_token을 발급한다(rotate_participant_tokens RPC).
-//
-// ★ 왜 필요한가: participants는 anon도 읽을 수 있고 팀장은 그 행에 실명(reveal_name)이 공개된다.
-//   p_token이 고정이면 "한 번 팀장이었던 사람"의 p_token↔실명 쌍이 F12로 영구히 남아, 다음 판에서
-//   익명 카드가 누구인지 역추적된다(팀장 티어를 바꿔 재추첨할수록 매핑이 누적된다).
-//   그래서 익명을 다시 뿌리는 모든 지점에서 토큰도 함께 갈아, 과거 캡처를 무효화한다.
-//
-// ※ 호출 순서 주의: 토큰이 바뀌면 이미 조회해 둔 participants의 p_token은 전부 낡은 값이 된다.
-//   반드시 "회전 → 재조회 → 나머지 작업" 순서로 쓸 것.
-export async function rotateParticipantTokens(): Promise<boolean> {
-    const { error } = await supabase.rpc('rotate_participant_tokens');
-    if (error) {
-        toast.error('참가자 식별자 재발급 실패: ' + error.message);
-        return false;
-    }
-    return true;
-}
-
-// ── 편성 초기화 ────────────────────────────────────────────────────────────
-
-// 팀 편성 데이터를 초기화한다. 팀장 추첨/해제가 공유.
-//  - keepLeaders=false : 전원 팀장직/팀배정/공개명 해제 (추첨/해제 → 완전 재설정)
-//  - keepLeaders=true  : 팀장은 유지, 스네이크로 채운 팀원만 해제
-// 첫 오류를 반환(없으면 null)해 호출부가 사용자 안내를 결정한다.
-// ※ 보안: 이 write들은 진행자(authenticated + is_admin) 세션에서만 RLS를 통과한다.
-export async function resetDraftData({ keepLeaders }: { keepLeaders: boolean }): Promise<PostgrestError | null> {
-    if (keepLeaders) {
-        // 팀장(is_leader=true)은 그대로 두고, 지명으로 채워진 팀원의 배정/공개명만 해제
-        const { error } = await supabase.from('participants')
-            .update({ team_name: null, reveal_name: null, assigned_randomly: false })
-            .eq('is_leader', false);
-        return error ?? null;
-    }
-
-    // 전원 팀장직·팀배정·공개명 해제
-    const { error } = await supabase.from('participants')
-        .update({ team_name: null, is_leader: false, reveal_name: null, assigned_randomly: false })
-        .not('p_token', 'is', null);
-    return error ?? null;
-}
 
 // ── 실명 조회 (전부 서버가 권한을 게이팅) ──────────────────────────────────
 
 // 진행자 전용 실명 맵 { p_token: "실명" }. participant_secrets 는 진행자만 RLS로 읽힘.
-// 사용처: useAdminNames(진행자 실명 모드에서 화면 표시), 팀장 추첨(공개명 세팅).
+// 사용처: useAdminNames(진행자 실명 모드에서 화면 표시).
 export async function fetchSecretNames(): Promise<Record<string, string>> {
     const { data } = await supabase.from('participant_secrets').select('p_token, real_name');
     return rowsToMap(data as { p_token: string; real_name: string }[] | null, (r) => r.p_token, (r) => r.real_name);
@@ -81,4 +39,16 @@ export async function fetchResultNames(): Promise<Record<string, string>> {
 export async function fetchRosterNames(): Promise<{ tier: string; real_name: string }[]> {
     const { data } = await supabase.rpc('roster_names');
     return (data ?? []) as { tier: string; real_name: string }[];
+}
+
+// ── 전체 실명 공개 창 ──────────────────────────────────────────────────────
+
+// [진행자] 공개 만료시각을 서버 시계로 설정한다. seconds<=0 이면 즉시 비공개.
+// ★ 클라이언트가 만료시각을 계산해 보내면 안 된다 — 게이팅은 서버 now() 와 비교하므로,
+//   진행자 PC 시계가 빠르면 그 오차만큼 실명이 더 오래 공개된다. 그래서 서버가 직접 계산한다.
+// 반환: 설정된 만료시각(비공개면 null). 실패하면 예외 대신 undefined 를 돌려준다.
+export async function setRevealWindow(seconds: number): Promise<string | null | undefined> {
+    const { data, error } = await supabase.rpc('set_reveal_window', { p_seconds: seconds });
+    if (error) return undefined;
+    return (data as string | null) ?? null;
 }

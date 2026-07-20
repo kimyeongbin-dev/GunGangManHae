@@ -26,7 +26,7 @@ export default function ResultScreen({ isAdmin, revealNames, publicReveal }: Pro
     const { participants } = useRealtime();
 
     // 진행자 개인 실명(secrets, 진행자만 RLS). 전체 공개 여부와 무관하게 토글로 확인 가능.
-    const adminNames = useAdminNames(isAdmin, participants.length);
+    const [adminNames] = useAdminNames(isAdmin, participants);
     // 전체 공개 실명(result_names RPC, 서버가 reveal_until로 게이팅). 공개 중일 때만 로드, 만료 시 비운다.
     const [resultNames, setResultNames] = useState<Record<string, string>>({});
     useEffect(() => {

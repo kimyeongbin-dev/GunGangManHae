@@ -41,7 +41,7 @@ export default function ParticipantEditModal({ initialForm, masked, onSave, onDe
 
     return (
         <div className={styles.modal} onClick={onClose}>
-            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} onKeyDown={handleKeyDown}>
+            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} onKeyDown={handleKeyDown} role="dialog" aria-modal="true" aria-label="참가자 등록/수정">
                 <h3>{form.p_token ? '참가자 수정' : '참가자 등록'}</h3>
                 {/* 비밀번호 타입 입력(비제이명 마스킹)이 form 밖에 있으면 크롬이 경고 → form으로 감싼다. */}
                 <form onSubmit={(e) => e.preventDefault()}>

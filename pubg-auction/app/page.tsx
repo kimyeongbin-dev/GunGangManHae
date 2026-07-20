@@ -21,13 +21,15 @@ import SnakeScreen from '@/components/SnakeScreen';
 import ParticipantsScreen from '@/components/ParticipantsScreen';
 import { RealtimeProvider } from '@/components/common/hooks/RealtimeProvider';
 import { regenerateAnonymous } from '@/components/common/anonActions';
+import { setRevealWindow } from '@/components/common/data';
+import { clearAdminNameCache } from '@/components/common/hooks/useAdminNames';
 
 // 화면 종류(모두 로컬 자유 이동).
 type PageView = 'participants' | 'draw' | 'snake' | 'result';
 
 // 진행자 계정 이메일 (비밀 아님, 아이디 역할). Supabase Auth 계정 및 SQL is_admin()과 반드시 일치.
 const ADMIN_EMAIL = 'admin@gungang.local';
-const REVEAL_DURATION_MS = 60_000; // '전체 실명 공개'가 유지되는 시간(이후 자동 비공개)
+const REVEAL_DURATION_SEC = 60; // '전체 실명 공개'가 유지되는 시간(초). 만료시각 계산은 서버가 한다.
 
 export default function MainApp() {
   const [view, setView] = useState<PageView>('snake');                  // 로컬 화면(모두 자유 이동)
@@ -107,7 +109,7 @@ export default function MainApp() {
   }, []);
 
   // 광클(1초에 수십 번) 방지: 같은 버튼의 연속 클릭을 600ms 쓰로틀한다.
-  // ★ React onClickCapture의 stopPropagation()으로는 onClick이 확실히 안 막힌다(경매 시작 중복 발생).
+  // ★ React onClickCapture의 stopPropagation()으로는 onClick이 확실히 안 막힌다(중복 실행 발생).
   //   또 Next(app router)는 document에 React를 하이드레이트해 이벤트가 document에 붙으므로, document에 뒤늦게
   //   붙인 리스너는 React보다 늦게 실행된다. → 캡처 경로상 더 위인 window에 붙여 React 디스패치보다 먼저
   //   stopImmediatePropagation으로 차단한다.
@@ -134,6 +136,8 @@ export default function MainApp() {
   const [anonBusy, setAnonBusy] = useState(false);
   const handleRegenAnon = async () => {
     if (anonBusy) return;
+    // 되돌릴 수 없는 조작인데 헤더에 상시 노출된 버튼이라 오클릭이 쉽다 → 확인을 받는다.
+    if (!(await confirmDialog('전 참가자의 익명 이름과 자리를 새로 배정할까요?\n되돌릴 수 없고, 관전자들이 보던 카드가 전부 바뀝니다.'))) return;
     setAnonBusy(true);
     try {
       await regenerateAnonymous();
@@ -142,20 +146,16 @@ export default function MainApp() {
     }
   };
 
-  // 전체 실명 공개/비공개 스위치(진행자 전용). on=now+60초, off=null(비공개).
-  // RLS로 막히면(진행자 세션 만료 등) Supabase는 "에러 없이 0행"만 갱신하므로 .select()로 반영을 확인한다.
+  // 전체 실명 공개/비공개 스위치(진행자 전용).
+  // ★ 만료시각은 서버가 계산한다(set_reveal_window RPC). 클라이언트가 Date.now()+60초를 보내면,
+  //   게이팅은 서버 now()와 비교하므로 진행자 PC 시계가 빠른 만큼 실명이 더 오래 공개된다.
   const setPublicReveal = async (on: boolean): Promise<boolean> => {
-    const reveal_until = on ? new Date(Date.now() + REVEAL_DURATION_MS).toISOString() : null;
-    const { data, error } = await supabase
-      .from('page_state')
-      .update({ reveal_until, updated_at: new Date().toISOString() })
-      .eq('id', 1)
-      .select();
-    if (error || !data?.length) {
+    const until = await setRevealWindow(on ? REVEAL_DURATION_SEC : 0);
+    if (until === undefined) {
       toast.error('저장에 실패했습니다.\n진행자 세션이 만료됐을 수 있어요. 모드 해제 후 다시 로그인해 주세요.');
       return false;
     }
-    setRevealUntil(reveal_until); // 낙관적 반영(실시간 이벤트로도 곧 동일 갱신)
+    setRevealUntil(until); // 낙관적 반영(실시간 이벤트로도 곧 동일 갱신)
     return true;
   };
 
@@ -178,18 +178,30 @@ export default function MainApp() {
   };
 
   // 진행자 모드 해제: 진행자가 빠지면 전체 실명 공개는 비공개로 고정(로그아웃 전 인증 상태에서 갱신).
+  // ★ 비공개 전환이 실패하면(세션 이미 만료 등) 진행자 화면만 비공개가 되고 나머지 전원에게는
+  //   최대 60초 동안 실명이 계속 공개된다. 그래서 결과를 확인하고 실패 시 붙잡는다.
   const handleAdminLogout = async () => {
     if (!(await confirmDialog('진행자 모드를 해제하시겠습니까?'))) return;
-    await supabase.from('page_state').update({ reveal_until: null, updated_at: new Date().toISOString() }).eq('id', 1);
-    setRevealUntil(null);
+
+    if (revealActiveRef.current) {
+      const until = await setRevealWindow(0);
+      if (until === undefined) {
+        toast.error('실명 공개를 끄지 못했습니다.\n다른 사람에게 실명이 계속 보일 수 있으니 다시 시도해 주세요.');
+        return; // 로그아웃을 진행하지 않는다 — 지금 나가면 끌 수단이 사라진다
+      }
+      setRevealUntil(null);
+    }
+
     await supabase.auth.signOut();
     setAdminCode('');
+    setRevealNames(false);   // 재로그인 시 실명 모드가 켜진 채 시작하지 않도록
+    clearAdminNameCache();   // 메모리에 남은 실명 맵 제거
     toast.info('일반 참가자 모드로 전환되었습니다.');
   };
 
   return (
     <RealtimeProvider>
-    <div className={styles.container}>
+    <div>
       {/* --- 상단 헤더 & 화면 전환 --- */}
       <header className={styles.header}>
         {/* 좌측: 페이지 이동 탭 (모두 동일하게 로컬 이동, 결과 포함) */}
@@ -249,7 +261,7 @@ export default function MainApp() {
       </header>
 
       {/* --- 메인 콘텐츠 (SPA 화면 전환 영역) --- */}
-      <main className={styles.mainContent}>
+      <main>
         {view === 'participants' && <ParticipantsScreen isAdmin={isAdmin} revealNames={revealNames} />}
         {view === 'draw' && <DrawScreen isAdmin={isAdmin} revealNames={revealNames} />}
         {view === 'snake' && <SnakeScreen isAdmin={isAdmin} revealNames={revealNames} />}

@@ -9,19 +9,22 @@ import { useRealtime } from '../common/hooks/useRealtime';
 import { TEAM_COUNT } from '../common/types';
 import { confirmDialog } from '@/lib/toast';
 import fonts from '../typography.module.css';
+import { clickable } from '../common/a11y';
 import styles from './style.module.css';
 import { drawSnakeLeaders, releaseLeaders } from '../SnakeScreen/snakeActions';
 import { ALL_TIERS } from '../SnakeScreen/snakeOrder';
 import { useAdminNames } from '../common/hooks/useAdminNames';
+import { useActionBusy } from '../common/actionLock';
 import ParticipantDetailModal from '../common/ui/ParticipantDetailModal';
 
 export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean; revealNames: boolean }) {
     // 실시간 참가자 목록에서 팀장(is_leader)만 추린다.
     const { participants } = useRealtime();
+    const busy = useActionBusy(); // 추첨/해제 등 긴 작업이 도는 중인가
     const leaders = participants.filter((p) => p.is_leader);
 
     // 진행자 실명모드에서만 실명 표시. 카드 클릭 시 상세(소개글 등) 팝업을 띄운다(읽기 전용).
-    const adminNames = useAdminNames(isAdmin, participants.length);
+    const [adminNames] = useAdminNames(isAdmin, participants);
     const displayNames = isAdmin && revealNames ? adminNames : undefined;
     const [viewingToken, setViewingToken] = useState<string | null>(null);
     const viewingTarget = participants.find((p) => p.p_token === viewingToken) ?? null;
@@ -49,18 +52,18 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
                 {isAdmin && (
                     <div className={styles.headerActions}>
                         {leaders.length > 0 && (
-                            <button onClick={handleRelease} className={`${fonts.drawBtn} ${styles.releaseBtn}`}>
+                            <button onClick={handleRelease} disabled={busy} className={`${fonts.drawBtn} ${styles.releaseBtn}`}>
                                 팀장 해제
                             </button>
                         )}
                         {/* 어느 티어를 팀장으로 쓸지 진행자가 고른다(마지막 '랜덤'은 무작위 티어). */}
-                        <span className={styles.drawLabel}>팀장 티어</span>
+                        <span className={styles.drawLabel}>{busy ? '처리 중…' : '팀장 티어'}</span>
                         {ALL_TIERS.map((t) => (
-                            <button key={t} onClick={() => handleDraw(t)} className={`${fonts.drawBtn} ${styles.drawBtn}`}>
+                            <button key={t} onClick={() => handleDraw(t)} disabled={busy} className={`${fonts.drawBtn} ${styles.drawBtn}`}>
                                 {t}티어
                             </button>
                         ))}
-                        <button onClick={() => handleDraw(null)} className={`${fonts.drawBtn} ${styles.snakeBtn}`}>
+                        <button onClick={() => handleDraw(null)} disabled={busy} className={`${fonts.drawBtn} ${styles.randomBtn}`}>
                             랜덤
                         </button>
                     </div>
@@ -81,7 +84,7 @@ export default function DrawScreen({ isAdmin, revealNames }: { isAdmin: boolean;
                             <div
                                 key={i}
                                 className={`${styles.card} ${leader ? styles.clickable : ''}`}
-                                onClick={leader ? () => setViewingToken(leader.p_token) : undefined}
+                                {...(leader ? clickable(() => setViewingToken(leader.p_token), `${teamName} 팀장 상세 보기`) : {})}
                             >
                                 <div className={`${fonts.teamCardLabel} ${styles.cardLabel}`}>{teamName}</div>
                                 {leader ? (

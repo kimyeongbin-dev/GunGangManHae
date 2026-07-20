@@ -11,14 +11,17 @@
 //
 // 렌더 위치: page.tsx의 view==='participants'.
 // ---------------------------------------------------------------------------
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRealtime } from '../common/hooks/useRealtime';
 import { useAdminNames } from '../common/hooks/useAdminNames';
 import { useParticipantCrud } from '../common/hooks/useParticipantCrud';
 import { SLOT_COUNT } from '../common/types';
 import { getTierBySlot, participantLabel } from '../common/utils';
 import { fetchRosterNames } from '../common/data';
+import { supabase } from '@/lib/supabaseClient';
+import { toast } from '@/lib/toast';
 import ParticipantEditModal from '../common/ui/ParticipantEditModal';
+import { clickable } from '../common/a11y';
 import styles from './style.module.css';
 import type { Participant, ModalForm } from '../common/types';
 
@@ -28,16 +31,22 @@ const TIERS = ['1', '2', '3', '4'];
 export default function ParticipantsScreen({ isAdmin, revealNames }: { isAdmin: boolean; revealNames: boolean }) {
     const { participants } = useRealtime();
     const showReal = isAdmin && revealNames; // 진행자 실명(비제이명) 표시 여부
-    const adminNames = useAdminNames(isAdmin, participants.length);
+    const [adminNames, refreshAdminNames] = useAdminNames(isAdmin, participants);
     const displayNames = showReal ? adminNames : undefined;
     const nameOf = (p: Participant) => participantLabel(p, displayNames?.[p.p_token]);
 
-    // 전원 공개 명단(티어 + 실명). 참가자가 바뀌면(등록/수정/삭제) 다시 불러온다.
-    // participants 배열은 실시간 변경이 있을 때만 새 객체가 되므로 이 의존성으로도 요청이 폭주하지 않는다.
+    // 전원 공개 명단(티어 + 실명). 이름·티어만 담으므로 '지명(team_name 변경)'으로는 바뀌지 않는다.
+    // ★ 의존성을 participants 전체로 두면 지명 1건마다 roster_names RPC 가 불필요하게 호출된다
+    //   (statement 트리거로 인해 관전자 전원이 지명마다 refetch). 그래서 명단이 실제로 바뀌는
+    //   신호 — 인원수 + 티어 분포 — 로만 재조회한다. 실명만 수정한 경우는 handleSave 가 직접 부른다.
+    const rosterSig = participants.length + '|' + participants.map((p) => p.tier).sort().join('');
     const [roster, setRoster] = useState<{ tier: string; real_name: string }[]>([]);
-    useEffect(() => {
-        fetchRosterNames().then(setRoster);
-    }, [participants]);
+    const reloadRoster = useCallback(() => {
+        let alive = true;
+        fetchRosterNames().then((r) => { if (alive) setRoster(r); });
+        return () => { alive = false; };
+    }, []);
+    useEffect(reloadRoster, [rosterSig, reloadRoster]);
 
     // 등록/편집/삭제(진행자 전용).
     const { saveParticipant, deleteParticipant } = useParticipantCrud(participants);
@@ -53,16 +62,43 @@ export default function ParticipantsScreen({ isAdmin, revealNames }: { isAdmin: 
         setEditSlot(slotIndex);
     };
 
-    // '수정' 배지: 기존 참가자 편집(실명은 진행자 secrets에서 채운다).
-    const handleEditParticipant = (p: Participant, slotIndex: number) => {
+    // '수정' 배지: 기존 참가자 편집.
+    // 실명은 진행자 secrets에서, 딜량·소갯말은 기반 테이블에서 직접 읽는다.
+    // ★ 화면이 읽는 공개 뷰는 팀장의 딜량·소갯말을 null 로 가리므로(0008), 그대로 폼에 넣으면
+    //   팀장을 수정할 때 값이 비어 저장 시 지워진다. 진행자는 기반 테이블 읽기 권한이 있다.
+    const handleEditParticipant = async (p: Participant, slotIndex: number) => {
+        const { data, error } = await supabase
+            .from('participants')
+            .select('avg_damage, intro')
+            .eq('p_token', p.p_token)
+            .maybeSingle();
+        // ★ 조회 실패 시 폼을 열지 않는다. 팀장은 공개 뷰에서 딜량·소갯말이 null 이라, 실패한 채
+        //   폼을 열면 빈 값으로 저장돼 소갯말이 지워질 수 있다. (세션 만료 등)
+        if (error || !data) {
+            toast.error('참가자 정보를 불러오지 못했습니다.\n잠시 후 다시 시도해 주세요.');
+            return;
+        }
         setEditForm({
             p_token: p.p_token,
             real_name: adminNames[p.p_token] ?? '',
             tier: p.tier,
-            avg_damage: p.avg_damage.toString(),
-            intro: p.intro || '',
+            avg_damage: String(data.avg_damage ?? ''),
+            intro: data.intro ?? '',
         });
         setEditSlot(slotIndex);
+    };
+
+    // 저장/삭제 후 실명 맵을 강제 재조회한다. 비제이명만 바꾼 경우는 토큰·인원이 그대로라
+    // useAdminNames 의 서명이 안 변해 자동 재조회가 안 걸리기 때문(중간-2).
+    const handleSave = async (form: ModalForm) => {
+        const ok = await saveParticipant(form);
+        if (ok) { refreshAdminNames(); reloadRoster(); }
+        return ok;
+    };
+    const handleDelete = async (token: string) => {
+        const ok = await deleteParticipant(token);
+        if (ok) { refreshAdminNames(); reloadRoster(); }
+        return ok;
     };
 
     return (
@@ -87,14 +123,15 @@ export default function ParticipantsScreen({ isAdmin, revealNames }: { isAdmin: 
                             const p = participants.find((part) => part.slot_index === i);
                             const cellClass = `${styles.cell} ${styles[`tier${tier}`]} ${p ? '' : styles.clickable}`;
                             return (
-                                <div key={i} className={cellClass} onClick={() => handleCellClick(i)}>
+                                <div key={i} className={cellClass} {...clickable(() => handleCellClick(i), p ? `${nameOf(p)}` : `${tier}티어 빈 자리에 등록`)}>
                                     {p ? (
                                         <>
                                             <span className={styles.name}>{nameOf(p)}</span>
-                                            <span className={styles.dmg}>{p.avg_damage}</span>
+                                            <span className={styles.dmg}>{p.avg_damage ?? '—'}</span>
                                             <div
                                                 className={styles.editBadge}
-                                                onClick={(e) => { e.stopPropagation(); handleEditParticipant(p, i); }}
+                                                {...clickable(() => handleEditParticipant(p, i), `${nameOf(p)} 수정`)}
+                                                onClickCapture={(e) => e.stopPropagation()}
                                             >
                                                 수정
                                             </div>
@@ -131,8 +168,8 @@ export default function ParticipantsScreen({ isAdmin, revealNames }: { isAdmin: 
                 <ParticipantEditModal
                     initialForm={editForm}
                     masked={!showReal}
-                    onSave={saveParticipant}
-                    onDelete={deleteParticipant}
+                    onSave={handleSave}
+                    onDelete={handleDelete}
                     onClose={() => setEditSlot(null)}
                 />
             )}

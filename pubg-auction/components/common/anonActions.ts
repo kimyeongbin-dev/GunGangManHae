@@ -1,79 +1,37 @@
 // components/common/anonActions.ts
-// 익명(fake_name) 재배정 + 동일 티어 내 그리드 슬롯 셔플 로직.
-// 훅이 아닌 독립 함수 → 헤더 버튼(page.tsx)과 팀장 추첨/해제(snakeActions.ts) 양쪽에서 재사용.
+// 익명(fake_name) 재배정 + 동일 티어 내 그리드 슬롯 셔플.
+// 실제 쓰기는 서버의 snake_reassign_anonymous RPC 가 한 트랜잭션으로 처리한다.
+// 여기서는 익명 이름 풀만 만들어 넘긴다 — 이름 테마를 SQL 에 중복 정의하지 않기 위해서다.
+//
+// ★ 예전에는 64건을 8건씩 나눠 PATCH 했다. 중간 청크가 실패하면 앞 청크의 slot_index 만
+//   새 값이 되어 뒤 청크의 옛 값과 겹쳤고, 그리드가 슬롯 기준 렌더라 참가자가 화면에서 사라졌다.
+//   RPC 한 번이면 전부 반영되거나 전부 롤백된다.
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from '@/lib/toast';
 import { generateAnonNames } from './anonNames';
-import { rotateParticipantTokens } from './data';
-import { shuffle } from './utils';
-import type { Participant } from './types';
+import { runExclusive } from './actionLock';
+import { SLOT_COUNT } from './types';
 
-const TIER_ROW_SIZE = 16; // 그리드 한 티어(행)의 슬롯 수 (16열 × 4행 구조)
-
-// [코어] 주어진 참가자들에게 새 익명을 배정하고, 티어별로 슬롯 순서를 무작위로 섞는다.
-//  - 토스트를 띄우지 않으므로 다른 흐름(추첨/해제)에서 조용히 재사용할 수 있다.
-//  - 각 티어(1~4) 안에서만 셔플 → 티어 구분은 유지한 채 자리만 무작위화.
-//  - 반환: 모든 업데이트가 성공했는지 여부.
-// 호출: regenerateAnonymous(아래), drawLeaders/releaseLeaders(drawActions.ts).
-export async function reassignAnonymous(participants: Participant[]): Promise<boolean> {
-    if (participants.length === 0) return true;
-
-    const names = generateAnonNames(participants.length); // 무작위 익명 풀
-    const updates: { p_token: string; fake_name: string; slot_index: number }[] = [];
-    let nameIdx = 0;
-
-    for (let tier = 1; tier <= 4; tier++) {
-        const tierParts = shuffle(participants.filter((p) => parseInt(p.tier) === tier));
-        const start = (tier - 1) * TIER_ROW_SIZE; // 이 티어 행의 시작 슬롯 인덱스
-        tierParts.forEach((p, idx) => {
-            updates.push({ p_token: p.p_token, fake_name: names[nameIdx++], slot_index: start + idx });
-        });
-    }
-
-    // 참가자별로 fake_name·slot_index만 갱신 (실명·팀·티어 등은 건드리지 않음).
-    // ★ 64건을 한꺼번에 병렬 PATCH하면 브라우저 동시 요청이 폭주해 net::ERR_INSUFFICIENT_RESOURCES가 나고
-    //    일부 요청이 실패 → 그 참가자들의 slot_index가 안 바뀌어 그리드에서 겹치거나 사라진다.
-    //    그래서 소량(CHUNK)씩 나눠 보내 동시 요청 수를 제한한다.
-    const CHUNK = 8;
-    for (let i = 0; i < updates.length; i += CHUNK) {
-        const results = await Promise.all(
-            updates.slice(i, i + CHUNK).map((u) =>
-                supabase.from('participants').update({ fake_name: u.fake_name, slot_index: u.slot_index }).eq('p_token', u.p_token),
-            ),
-        );
-        const firstErr = results.find((r) => r.error)?.error;
-        if (firstErr) {
-            // 실제 원인을 콘솔에 남긴다(일반 토스트만으로는 진단 불가). 네트워크 폭주면 여기서 드러남.
-            console.error('[익명 재배정] 업데이트 실패:', firstErr);
-            return false;
-        }
+// [코어] 익명 이름 64개를 만들어 서버에 재배정을 요청한다.
+// 토스트를 띄우지 않으므로 다른 흐름(추첨/해제)에서 조용히 재사용할 수 있다.
+// 호출: regenerateAnonymous(아래). 팀장 추첨/해제는 서버 RPC 안에서 같은 로직을 직접 수행한다.
+async function reassignAnonymous(): Promise<boolean> {
+    const { error } = await supabase.rpc('snake_reassign_anonymous', {
+        p_names: generateAnonNames(SLOT_COUNT),
+    });
+    if (error) {
+        console.error('[익명 재배정] 실패:', error);
+        return false;
     }
     return true;
 }
 
-// [진행자] 헤더 '익명 만들기' 버튼 핸들러: 전 참가자를 조회해 재배정하고 결과를 토스트로 안내.
-// 호출: page.tsx 헤더의 onClick.
-// ★ 동시 실행 방지(모듈 레벨 잠금): 광클로 이 함수가 겹쳐 돌면 64명 슬롯 재배정이 충돌해
-//    slot_index가 중복되고, 그리드가 슬롯 기준으로 그려지므로 일부 참가자가 사라진다.
-//    실행 중 재호출은 조용히 무시한다(버튼 비활성화와 이중 안전장치).
-let regenerating = false;
-export async function regenerateAnonymous() {
-    if (regenerating) return;
-    regenerating = true;
-    try {
-        // ★ 먼저 p_token을 갈고(과거 F12 캡처 무효화), 그 다음에 새 토큰으로 조회한다.
-        //   순서를 바꾸면 낡은 토큰으로 update를 날리게 돼 아무 행도 안 맞는다.
-        if (!(await rotateParticipantTokens())) return;
-
-        const { data, error } = await supabase.from('participants').select('*');
-        if (error) { toast.error('참가자 조회 실패: ' + error.message); return; }
-        const participants = (data ?? []) as Participant[];
-        if (participants.length === 0) { toast.error('등록된 참가자가 없습니다.'); return; }
-
-        const ok = await reassignAnonymous(participants);
-        if (!ok) { toast.error('익명 생성 중 오류가 발생했습니다.'); return; }
+// [진행자] 헤더 '익명 만들기' 버튼 핸들러.
+// 판을 바꾸는 작업이므로 전역 잠금(runExclusive)으로 다른 파괴적 조작과 겹치지 않게 한다.
+export async function regenerateAnonymous(): Promise<void> {
+    await runExclusive(async () => {
+        const ok = await reassignAnonymous();
+        if (!ok) { toast.error('익명 생성에 실패했습니다.'); return; }
         toast.success('익명이 생성되었습니다.');
-    } finally {
-        regenerating = false;
-    }
+    });
 }
