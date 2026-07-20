@@ -15,20 +15,26 @@
   각 RPC 는 첫 줄에서 `is_admin()` 을 재검사하고, `PUBLIC` EXECUTE 는 회수돼 있다.
 - 앱에는 **서버 코드가 없다**(Server Action / API Route 없음). 따라서 보안 경계 전체가 여기 RLS/RPC 에 있다.
 
-## 최초 설치 순서
+## 최초 설치 순서 (새 프로젝트)
 
 1. Supabase 대시보드 → Authentication → Users → **Add user** 로 진행자 계정 1개 생성.
    이메일은 `0001_security_lockdown.sql` 의 `is_admin()` 및 `app/page.tsx` 의 `ADMIN_EMAIL` 과 **정확히 일치**해야 한다.
 2. Authentication → Providers → Email 에서 **"Allow new users to sign up" 끄기**.
-3. `migrations/` 의 SQL 을 **0001 → 0010 순서대로 빠짐없이** 실행.
-   ⚠️ 특히 `0009_view_readonly.sql` 를 건너뛰면 anon 이 `participants_public` 뷰로 지명을
-   조작할 수 있는 상태로 배포된다(2차 감사에서 실측된 구멍).
+3. **`0000_schema.sql` 하나만** SQL Editor 에 붙여 실행한다.
+   이 파일이 현재 전체 스키마(테이블·함수·정책·트리거·뷰)를 담고 있으므로,
+   **0001~0012 는 다시 실행하지 않는다**(이력용 기록이며, 특히 0002 는 재실행 불가).
 
-> ⚠️ `participants` · `page_state` · `auction_*` 테이블의 `create table` 문은 이 저장소에 없다.
-> 대시보드에서 수동 생성됐기 때문이다. **DB 를 처음부터 재구축하려면 먼저
-> `pg_dump --schema-only` 로 `0000_schema.sql` 을 뽑아 두어야 한다.** (점검 보고서 5번 항목)
+> `0000_schema.sql` 은 현재 DB 의 `pg_dump --schema-only` 스냅샷이다.
+> 스키마를 바꾸는 새 마이그레이션(00NN)을 추가한 뒤에는 아래로 다시 떠서 갱신한다:
+> ```
+> npx supabase db dump --db-url "<Session pooler URI>" -f pubg-auction/supabase/migrations/0000_schema.sql
+> ```
+> (Session pooler URI = 대시보드 상단 Connect → Session pooler. Direct 호스트는 Docker 안에서 이름해석이 안 된다.)
 
-## 마이그레이션 요약
+## 마이그레이션 이력
+
+> 아래는 **이력**이다. 이미 운영 중인 DB 를 단계적으로 갱신할 때만 개별 실행한다.
+> 새 프로젝트는 위 `0000_schema.sql` 로 한 번에 세운다.
 
 | 파일 | 내용 |
 |---|---|
