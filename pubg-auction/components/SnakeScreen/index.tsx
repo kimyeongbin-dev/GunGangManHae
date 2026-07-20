@@ -10,7 +10,7 @@
 //   · ★ 진행 티어(active_tier)는 공유된다 — 진행자가 고른 티어가 곧 '지금 뽑는 티어'이고,
 //     그래야 편성표의 '지명 대기'가 전원에게 같은 칸으로 보인다.
 //     참가자는 그와 별개로 좌측 탭에서 아무 티어나 자유롭게 열람할 수 있다(로컬 보기).
-//   · 지그재그 방향은 page_state.draft_order(뽑은 순번 기록)로 정해진다 — snakeOrder.ts 참고.
+//   · 지그재그 방향은 page_state.tier_direction(티어별 방향 저장)으로 정해진다 — snakeOrder.ts 참고.
 //   · 순서를 바꾸고 싶으면 '뽑기 순서 리롤'로 팀 번호를 통째로 재배열한다(뽑힌 팀원도 함께 이동).
 //
 // ★ 동시성(중복 등록 방지):
@@ -30,6 +30,7 @@ import { confirmDialog } from '@/lib/toast';
 import fonts from '../typography.module.css';
 import styles from './style.module.css';
 import { ALL_TIERS, remainingTiers, memberAt, currentTeamFor, isTierDone } from './snakeOrder';
+import type { TierDirection } from './snakeOrder';
 import {
     assignSnakePick, cancelSnakePick, resetSnakeTier, fillTierRandomly,
     rerollTeamOrder, fetchDraftState, saveActiveTier,
@@ -57,18 +58,18 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
     const [viewingToken, setViewingToken] = useState<string | null>(null); // 상세 팝업 대상(그리드 셀 클릭)
     const [viewTier, setViewTier] = useState<string | null>(null);         // 내가 보고 있는 티어(로컬 열람)
     const [activeTier, setActiveTier] = useState<string | null>(null);     // 지금 뽑는 티어(진행자가 정해 공유)
-    const [draftOrder, setDraftOrder] = useState<string[]>([]);            // 뽑은 순번(지그재그 방향의 근거)
+    const [tierDirection, setTierDirection] = useState<TierDirection>({});  // 티어별 뽑기 방향(지그재그 근거)
 
-    // 진행 상태 구독: 진행 티어와 뽑은 순번을 전원이 같이 본다.
+    // 진행 상태 구독: 진행 티어와 티어별 방향을 전원이 같이 본다.
     // ★ 구독 콜백은 공유 상태만 갱신하고 viewTier(=내가 보는 화면)는 건드리지 않는다.
     //   진행자가 티어를 옮겼다고 남의 그리드까지 갈아치우면, 보고 있던 참가자 화면이 갑자기 바뀐다.
     //   최초 진입 때만 내 그리드를 그때의 진행 티어에 맞춰 두고, 이후로는 각자 탭으로 정한다.
     useEffect(() => {
         let alive = true;
-        const apply = (s: { activeTier: string | null; draftOrder: string[] }) => {
+        const apply = (s: { activeTier: string | null; tierDirection: TierDirection }) => {
             if (!alive) return;
             setActiveTier(s.activeTier);
-            setDraftOrder(s.draftOrder);
+            setTierDirection(s.tierDirection);
         };
         fetchDraftState().then((s) => {
             if (!alive) return;
@@ -78,8 +79,8 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
         const channel = supabase
             .channel('draft_state_changes')
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'page_state' }, (payload) => {
-                const row = payload.new as { active_tier: string | null; draft_order: string[] | null };
-                apply({ activeTier: row.active_tier ?? null, draftOrder: row.draft_order ?? [] });
+                const row = payload.new as { active_tier: string | null; tier_direction: TierDirection | null };
+                apply({ activeTier: row.active_tier ?? null, tierDirection: row.tier_direction ?? {} });
             })
             .subscribe((status) => { if (status === 'SUBSCRIBED') fetchDraftState().then(apply); });
         return () => { alive = false; supabase.removeChannel(channel); };
@@ -132,7 +133,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
     const activeUsable = activeTier && rest.includes(activeTier) && !isTierDone(merged, activeTier);
     const turnTier = (activeUsable ? activeTier : null) ?? firstUnfinished ?? null;
     // 그 티어의 현재 차례 팀 = 순서상 아직 비어 있는 첫 칸. 전원에게 같은 값이다.
-    const currentTeam = leaderTier && turnTier ? currentTeamFor(merged, draftOrder, turnTier) : null;
+    const currentTeam = leaderTier && turnTier ? currentTeamFor(merged, tierDirection, turnTier) : null;
 
     // 좌측 그리드에 표시할 티어. 내가 탭으로 고른 티어가 최우선.
     // ★ 아직 안 골랐을 때의 기본값이 turnTier면 안 된다 — 진행자가 티어를 옮길 때마다 남의 그리드가

@@ -11,10 +11,10 @@
 //
 //   · snake_draw_leaders     : 검증 → 초기화 → 토큰 회전 → 익명 재배정 → 팀장 배정
 //   · snake_release_leaders  : 전원 해제 → 토큰 회전 → 익명 재배정
-//   · snake_assign_pick      : 지명 + draft_order(뽑은 순번)에 티어 기록
-//   · snake_cancel_pick      : 지명 취소 (draft_order 는 건드리지 않음 — 방향 보존)
-//   · snake_reset_tier       : 티어 초기화 + draft_order 에서 제거
-//   · snake_fill_tier_randomly : 티어 16명 통째 무작위 배치 + draft_order 에서 제거
+//   · snake_assign_pick      : 지명 + (그 티어를 처음 뽑으면) tier_direction 에 방향 확정 저장
+//   · snake_cancel_pick      : 지명 취소 (tier_direction 은 건드리지 않음 — 방향 보존)
+//   · snake_reset_tier       : 티어 초기화 + tier_direction 에서 그 티어 방향 제거
+//   · snake_fill_tier_randomly : 티어 16명 통째 무작위 배치 + tier_direction 에서 제거
 //   · snake_reroll_teams     : 팀 번호 순열 재배열(팀 구성 유지)
 // ---------------------------------------------------------------------------
 import { supabase } from '@/lib/supabaseClient';
@@ -22,6 +22,7 @@ import { toast } from '@/lib/toast';
 import { generateAnonNames } from '../common/anonNames';
 import { runExclusive } from '../common/actionLock';
 import { SLOT_COUNT } from '../common/types';
+import type { TierDirection } from './snakeOrder';
 
 // RPC 호출 공통 처리. 실패하면 서버가 준 메시지를 그대로 보여준다
 // (권한 없음 / 인원 부족 / 제약 위반이 전부 여기로 올라온다).
@@ -92,7 +93,7 @@ export async function assignSnakePick(pToken: string, team: string): Promise<boo
     return ok ?? false;
 }
 
-// [진행자] 지명 취소. ★ 뽑은 순번(draft_order)은 건드리지 않는다 —
+// [진행자] 지명 취소. ★ 방향 저장(tier_direction)은 건드리지 않는다 —
 // 과거에 그 티어를 직접 뽑았다는 사실이 유지되어야 진행 중 티어의 방향이 안 뒤집힌다.
 export async function cancelSnakePick(pToken: string): Promise<boolean> {
     const ok = await runExclusive(
@@ -102,14 +103,14 @@ export async function cancelSnakePick(pToken: string): Promise<boolean> {
     return ok ?? false;
 }
 
-// ── 진행 상태 공유 (진행 티어 · 뽑은 순번) ─────────────────────────────────
+// ── 진행 상태 공유 (진행 티어 · 티어별 방향) ───────────────────────────────
 
-// page_state 한 행에서 진행 티어와 뽑은 순번을 함께 읽는다.
-export async function fetchDraftState(): Promise<{ activeTier: string | null; draftOrder: string[] }> {
-    const { data } = await supabase.from('page_state').select('active_tier, draft_order').eq('id', 1).maybeSingle();
+// page_state 한 행에서 진행 티어와 티어별 뽑기 방향을 함께 읽는다.
+export async function fetchDraftState(): Promise<{ activeTier: string | null; tierDirection: TierDirection }> {
+    const { data } = await supabase.from('page_state').select('active_tier, tier_direction').eq('id', 1).maybeSingle();
     return {
         activeTier: (data?.active_tier as string | null) ?? null,
-        draftOrder: (data?.draft_order as string[] | null) ?? [],
+        tierDirection: (data?.tier_direction as TierDirection | null) ?? {},
     };
 }
 
