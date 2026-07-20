@@ -45,80 +45,7 @@
     background: #9e9e9e;
 }
 
-/* 8x8 참가자 그리드 */
-.board {
-    margin: 0 auto;
-    max-width: 1700px;
-}
-.grid {
-    gap: var(--space-2);
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-}
-.cell {
-    gap: var(--space-1);
-    color: #fff;
-    border: 2px solid #555;
-    cursor: default;
-    display: flex;
-    padding: var(--space-3);
-    overflow: hidden;
-    position: relative;
-    background: #222;
-    min-height: 5.2rem;
-    align-items: center;
-    border-radius: 6px;
-    flex-direction: column;
-    justify-content: center;
-}
-.clickable {
-    cursor: pointer;
-}
-.clickable:hover {
-    background: #2f2f2f;
-}
-.tier1 {
-    border-color: #ff9800;
-}
-.tier2 {
-    border-color: #2196f3;
-}
-.tier3 {
-    border-color: #4caf50;
-}
-.tier4 {
-    border-color: #9e9e9e;
-}
-.name {
-    overflow: hidden;
-    font-size: 1.05rem;
-    max-width: 100%;
-    font-weight: bold;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-.dmg {
-    color: #ccc;
-    font-size: 0.95rem;
-}
-/* 진행자: 채워진 칸 '수정' 배지 · 빈 칸 '+ 등록' 힌트 */
-.editBadge {
-    top: var(--space-1);
-    color: #ddd;
-    right: var(--space-1);
-    cursor: pointer;
-    padding: 0 var(--space-1);
-    position: absolute;
-    font-size: 0.75rem;
-    background: #444;
-    border-radius: 3px;
-}
-.addHint {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-/* 참가자/관전자용 티어별 실명 명단 (이름만 — 딜량·소갯말은 블라인드 유지를 위해 표시하지 않음).
+/* 티어별 실명 명단 (이름만 — 딜량·소갯말은 블라인드 유지를 위해 표시하지 않음).
    카드 하나 폭을 220~280px로 제한해 넓은 화면에서 과하게 퍼지지 않게 하고, 가운데 정렬한다.
    auto-fit + minmax 로 화면이 좁아지면 4→3→2→1열로 자동으로 접힌다(반응형). */
 .roster {
@@ -227,6 +154,52 @@
 .rosterName:hover {
     background: rgba(255, 255, 255, 0.04);
 }
+
+/* 진행자: 이름 클릭 시 수정. 포인터 커서 + 호버 시 '수정' 힌트를 오른쪽에 표시 */
+.rosterNameEdit {
+    cursor: pointer;
+}
+.rosterNameEdit::after {
+    color: var(--tier);
+    content: '수정';
+    opacity: 0;
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transition: opacity 0.12s ease;
+}
+.rosterNameEdit:hover::after,
+.rosterNameEdit:focus-visible::after {
+    opacity: 1;
+}
+.rosterNameEdit:focus-visible {
+    outline: 2px solid var(--tier);
+    outline-offset: -2px;
+}
+
+/* 진행자: 티어에 새 참가자 등록 (점선 버튼) */
+.rosterAdd {
+    gap: var(--space-2);
+    color: #888;
+    cursor: pointer;
+    display: flex;
+    padding: var(--space-2);
+    margin-top: var(--space-1-5);
+    font-size: 0.9rem;
+    align-items: center;
+    border-radius: 6px;
+    justify-content: center;
+    border: 1px dashed #3a3a3a;
+    transition: all 0.12s ease;
+}
+.rosterAdd:hover,
+.rosterAdd:focus-visible {
+    color: var(--tier);
+    outline: none;
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--tier);
+}
+
 .rosterEmpty {
     color: #666;
     padding: var(--space-3) 0;
