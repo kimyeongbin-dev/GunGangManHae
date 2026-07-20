@@ -38,13 +38,6 @@
     border-color: #f44336;
 }
 /* 방송용 큰 알림 (금색 + 더 큼) */
-.toastAnnounce {
-    padding: var(--space-6) 2.75rem; /* 2.75rem = 44px */
-    word-break: keep-all;
-    border-color: #ffb300;
-    border-width: 3px;
-    overflow-wrap: break-word;
-}
 
 /* 확인 모달 */
 .overlay {

@@ -5,9 +5,10 @@
 // ---------------------------------------------------------------------------
 import type { Participant } from './types';
 
-// 미배정 그리드는 "16열 × 4행(행 = 티어)" 구조다. 한 티어(행)에 담기는 슬롯 수 = 16.
+// 슬롯 0~63은 티어별로 16칸씩 연속 배정된다(0~15=1티어, 16~31=2티어 …).
+// ★ 화면 열 수와는 무관하다 — 진행자 그리드는 8열이라 한 티어가 두 줄을 차지한다.
 // getTierBySlot / firstFreeSlotInTier 가 공유하는 상수.
-const GRID_COLS = 16;
+const TIER_SIZE = 16;
 
 // ── 슬롯 ↔ 티어 매핑 ───────────────────────────────────────────────────────
 
@@ -15,7 +16,7 @@ const GRID_COLS = 16;
 // 0~15 = 1티어, 16~31 = 2티어, 32~47 = 3티어, 48~63 = 4티어.
 // 사용처: ParticipantsScreen(진행자 그리드의 셀별 티어, 빈 칸 등록 시 티어 결정).
 export const getTierBySlot = (slotIndex: number): string => {
-    const tier = Math.floor(slotIndex / GRID_COLS) + 1; // 행 번호(0~3) → 티어(1~4)
+    const tier = Math.floor(slotIndex / TIER_SIZE) + 1; // 행 번호(0~3) → 티어(1~4)
     return tier >= 1 && tier <= 4 ? String(tier) : '1';
 };
 
@@ -23,8 +24,8 @@ export const getTierBySlot = (slotIndex: number): string => {
 // 티어 T의 슬롯 범위는 (T-1)*16 ~ (T-1)*16 + 15.
 // 사용처: useParticipantCrud.saveParticipant(신규 등록/티어 변경 시 자리 배정).
 export const firstFreeSlotInTier = (tier: string, occupied: Set<number>): number => {
-    const start = (parseInt(tier) - 1) * GRID_COLS;
-    for (let i = start; i < start + GRID_COLS; i++) {
+    const start = (parseInt(tier) - 1) * TIER_SIZE;
+    for (let i = start; i < start + TIER_SIZE; i++) {
         if (!occupied.has(i)) return i;
     }
     return -1;
@@ -47,7 +48,7 @@ export const participantLabel = (p: Participant, realName?: string): string => {
 // ── 기타 ────────────────────────────────────────────────────────────────
 
 // 배열을 제자리(in-place) Fisher-Yates 로 섞고 그 배열을 반환한다.
-// 사용처: generateAnonNames(익명 조합), reassignAnonymous(티어 내 슬롯), 팀장 추첨/순서 리롤/랜덤 배치.
+// 사용처: generateAnonNames(익명 조합). 티어 내 슬롯 셔플·팀장 추첨은 서버 RPC 가 직접 수행한다.
 export const shuffle = <T>(arr: T[]): T[] => {
     for (let i = arr.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));

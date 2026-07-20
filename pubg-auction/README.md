@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 건강만해 블라인드 팀 뽑기
 
-## Getting Started
+배틀그라운드 대회용 **블라인드 팀 편성** 웹앱.
+64명(티어 1~4 각 16명)을 16개 팀으로 나눈다. 팀당 티어별 1명씩 들어간다.
 
-First, run the development server:
+핵심 제약은 **뽑는 동안 참가자가 누구인지 몰라야 한다**는 것이다.
+참가자는 익명 카드(티어·딜량·소갯말)로만 보이고, 실명은 서버가 게이팅한다.
+
+## 뽑는 방식 — 스네이크 드래프트
+
+1. 진행자가 팀장으로 쓸 티어를 하나 고른다(또는 랜덤). 그 티어 16명이 각 팀의 팀장이 된다.
+2. 남은 3개 티어를 지그재그로 채운다. 첫 번째로 뽑는 티어는 1팀부터, 두 번째는 16팀부터, 세 번째는 다시 1팀부터.
+3. 진행자가 방송 채팅으로 지명을 받아 대신 등록한다. 팀장 티어 자리의 '뽑기 순서 리롤'을 누르면
+   팀 번호가 통째로 재배열되어 순서가 바뀐다(이미 뽑은 팀원은 팀장과 함께 따라간다).
+4. 한 티어를 통째로 운에 맡기고 싶으면 '티어 랜덤 배치'를 쓴다.
+
+## 화면
+
+| 화면 | 참가자·관전자 | 진행자 |
+|---|---|---|
+| 참가자 | 티어별 실명 명단만 | 8×8 그리드에서 등록·수정·삭제 |
+| 팀장 추첨 | 팀장 명단 | 팀장 티어 선택 추첨 / 랜덤 / 해제 |
+| 스네이크 | 티어 탭으로 자유 열람, 편성표 실시간 관전 | 지명·취소·초기화·랜덤배치·순서리롤 |
+| 결과 | 최종 편성표(익명) | 전체 실명 공개(60초) |
+
+## 기술 구성
+
+- **Next.js 16** (App Router). `app/page.tsx` 하나가 `'use client'` SPA 루트다.
+- **Supabase** — PostgREST(테이블 CRUD) · Auth(진행자 로그인) · Realtime(변경 신호) · RPC(원자적 연산)
+- **서버 코드 없음.** Server Action 도 API Route 도 없다.
+  따라서 **보안 경계 전체가 Postgres 의 RLS 와 RPC 에 있다.** → `supabase/README.md` 참고
+- 스타일은 CSS Modules. 폰트 크기는 `components/typography.module.css` 한 곳에서 조절한다.
+
+## 개발
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000
+npm run build
+npm run lint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local` 에 `NEXT_PUBLIC_SUPABASE_URL` 과 `NEXT_PUBLIC_SUPABASE_ANON_KEY` 가 필요하다.
+DB 설정은 `supabase/README.md` 의 순서를 따른다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 문서
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `supabase/README.md` — 권한 모델, 마이그레이션 순서, 블라인드 방어 구조
+- `docs/audit-2026-07-20.md` — 전체 점검 보고서(발견 사항과 조치 현황)
+- `docs/flow.md` — 최초 기획안 (경매 방식 기준. 현재 앱은 스네이크 전용)
 
-## Learn More
+## 이전 버전
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+경매(블라인드 입찰) 방식으로 구현했던 버전은 git 태그 **`v1-auction`** 에 보존돼 있다.
+관련 DB 테이블과 RPC 도 그 태그가 실행될 수 있도록 남겨 두었다.

@@ -69,10 +69,6 @@
     font-size: 1rem;
     font-weight: 600;
 } /* 일반 토스트 메시지 */
-.toastAnnounce {
-    font-size: 1.75rem;
-    font-weight: bold;
-} /* 방송용 큰 알림 */
 .confirmText {
     font-size: 0.9375rem;
 } /* 확인창 본문 */

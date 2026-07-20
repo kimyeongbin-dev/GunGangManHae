@@ -10,7 +10,6 @@ const KIND_CLASS: Record<ToastKind, string> = {
     info: styles.toastInfo,
     success: styles.toastSuccess,
     error: styles.toastError,
-    announce: styles.toastAnnounce,
 };
 
 export default function Toaster() {
@@ -18,8 +17,8 @@ export default function Toaster() {
     const confirm = state.confirms[0]; // 한 번에 하나씩 표시
 
     // 확인 모달이 떠 있는 동안 Enter=확인 / Esc=취소.
-    // 캡처 단계에서 먼저 처리하고 전파를 막아, 뒤에 있는 입력창(입찰 등)이나 다른 화면의
-    // 키 핸들러(상세/편집 모달)가 같은 키를 함께 처리하지 않도록 한다.
+    // 캡처 단계에서 먼저 처리하고 전파를 막아, 뒤에 있는 화면의 키 핸들러(상세/편집 모달)가
+    // 같은 키를 함께 처리하지 않도록 한다.
     useEffect(() => {
         if (!confirm) return;
         const onKey = (e: KeyboardEvent) => {
@@ -39,13 +38,14 @@ export default function Toaster() {
 
     return (
         <>
-            {/* 토스트 스택 (화면 중앙) */}
-            <div className={styles.stack}>
+            {/* 토스트 스택 (화면 중앙).
+                이 앱의 실패 안내는 전부 토스트라, 스크린리더에도 전달되도록 live region 으로 둔다. */}
+            <div className={styles.stack} role="status" aria-live="polite" aria-atomic="true">
                 {state.toasts.map((t) => (
                     <div
                         key={t.id}
                         onClick={() => dismissToast(t.id)}
-                        className={`${styles.toast} ${KIND_CLASS[t.kind]} ${t.kind === 'announce' ? fonts.toastAnnounce : fonts.toastText}`}
+                        className={`${styles.toast} ${KIND_CLASS[t.kind]} ${fonts.toastText}`}
                     >
                         {t.message}
                     </div>
@@ -55,7 +55,13 @@ export default function Toaster() {
             {/* 확인 모달 */}
             {confirm && (
                 <div className={styles.overlay} onClick={() => resolveConfirm(confirm.id, false)}>
-                    <div className={styles.box} onClick={(e) => e.stopPropagation()}>
+                    <div
+                        className={styles.box}
+                        onClick={(e) => e.stopPropagation()}
+                        role="alertdialog"
+                        aria-modal="true"
+                        aria-label="확인"
+                    >
                         <p className={`${fonts.confirmText} ${styles.msg}`}>{confirm.message}</p>
                         <div className={styles.btnRow}>
                             <button onClick={() => resolveConfirm(confirm.id, false)} className={`${fonts.confirmBtn} ${styles.cancelBtn}`}>
