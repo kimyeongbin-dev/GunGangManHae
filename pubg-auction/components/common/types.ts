@@ -13,13 +13,8 @@ export type Participant = {
     reveal_name: string | null; // 공개 표시명. 팀장/결과공개 시에만 실명이 채워지고, 그 외엔 null(블라인드).
     fake_name: string;          // 익명 이름(예: "프라이팬 붕대"). '익명 만들기'로 생성.
     tier: string;               // 티어 "1"~"4".
-    // 평균 딜량 / 한 줄 소갯말 (뽑기 판단용 공개 정보).
-    // ★ 팀장인 동안에는 null 이다 — 공개 뷰(participants_public)가 가린다.
-    //   팀장은 실명이 공개되는 대상이라, 딜량이 같은 행에 함께 보이면 '실명 ↔ 딜량' 지문이 만들어지고
-    //   다음 판에서 익명 카드를 역추적할 수 있게 된다(0008 마이그레이션 참고). 뽑히는 대상도 아니라
-    //   가려도 기능 손실이 없다. 정확한 값은 진행자만 기반 테이블에서 읽는다.
-    avg_damage: number | null;
-    intro: string | null;
+    avg_damage: number;         // 평균 딜량(뽑기 판단용 공개 정보). 팀장 포함 전원 공개(0012).
+    intro: string;              // 한 줄 소갯말(공개 정보).
     team_name: string | null;   // 배정된 팀("N팀"). 팀장 배정 또는 스네이크 지명 시 채워진다.
     is_leader: boolean;         // 팀장 여부. true면 익명 대신 "실명(팀장)"으로 공개.
     assigned_randomly: boolean; // 배정 방식. true='티어 랜덤 배치'로 한 번에 채움 / false=직접 지명(또는 팀장).

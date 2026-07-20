@@ -297,8 +297,7 @@ export default function SnakeScreen({ isAdmin, revealNames }: { isAdmin: boolean
                                             `${nameOf(p)} 상세 보기${available ? '' : ` (${p.team_name} 배정됨)`}`)}
                                     >
                                         <span className={styles.cellName}>{nameOf(p)}</span>
-                                        {/* 팀장은 딜량이 가려진다(0008) — 뽑는 대상이 아니라 필요도 없다 */}
-                                        <span className={styles.cellDmg}>{p.avg_damage ?? '—'}</span>
+                                        <span className={styles.cellDmg}>{p.avg_damage}</span>
                                         {!available && <span className={styles.cellTeam}>{p.team_name}</span>}
                                     </div>
                                 );

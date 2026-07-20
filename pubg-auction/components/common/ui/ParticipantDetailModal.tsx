@@ -57,12 +57,10 @@ export default function ParticipantDetailModal({ target, realName, onClose, snak
                         {target.tier} 티어
                     </span>
 
-                    {/* 딜량 배지. 팀장은 가려진다(0008 — 실명과 함께 노출되면 지문이 되므로) */}
-                    {target.avg_damage !== null && (
-                        <span className={styles.statBadge}>
-                            평균 딜량: {target.avg_damage}
-                        </span>
-                    )}
+                    {/* 딜량 배지 */}
+                    <span className={styles.statBadge}>
+                        평균 딜량: {target.avg_damage}
+                    </span>
 
                     {/* 팀 배지 + 팀장이면 팀장 배지 */}
                     {target.team_name && (
@@ -84,11 +82,9 @@ export default function ParticipantDetailModal({ target, realName, onClose, snak
                     )}
                 </div>
 
-                {/* 소개글 강조 구역. 팀장은 딜량과 같은 이유로 가려진다. */}
+                {/* 소개글 강조 구역 */}
                 <div className={styles.introDisplay}>
-                    {target.is_leader
-                        ? '팀장은 소개글이 표시되지 않습니다.'
-                        : `"${target.intro || '등록된 소개글이 없습니다.'}"`}
+                    &quot;{target.intro || '등록된 소개글이 없습니다.'}&quot;
                 </div>
 
                 {/* 현재 상태 안내 + 진행자 액션. 편성표의 × 와 같은 동작이지만, 좌측 그리드에서 바로

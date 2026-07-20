@@ -18,8 +18,6 @@ import { useAdminNames } from '../common/hooks/useAdminNames';
 import { useParticipantCrud } from '../common/hooks/useParticipantCrud';
 import { TEAM_COUNT } from '../common/types';
 import { fetchRosterNames } from '../common/data';
-import { supabase } from '@/lib/supabaseClient';
-import { toast } from '@/lib/toast';
 import ParticipantEditModal from '../common/ui/ParticipantEditModal';
 import { clickable } from '../common/a11y';
 import styles from './style.module.css';
@@ -61,25 +59,15 @@ export default function ParticipantsScreen({ isAdmin, revealNames }: { isAdmin: 
         setEditOpen(true);
     };
 
-    // 기존 참가자 수정: 실명은 secrets(adminNames)에서, 딜량·소갯말은 기반 테이블에서 직접 읽는다.
-    // ★ 화면이 읽는 공개 뷰는 팀장의 딜량·소갯말을 null 로 가리므로(0008), 조회 실패 시 폼을 열지 않는다
-    //   (빈 값으로 저장돼 소갯말이 지워지는 것 방지). 진행자는 기반 테이블 읽기 권한이 있다.
-    const openEdit = async (p: Participant) => {
-        const { data, error } = await supabase
-            .from('participants')
-            .select('avg_damage, intro')
-            .eq('p_token', p.p_token)
-            .maybeSingle();
-        if (error || !data) {
-            toast.error('참가자 정보를 불러오지 못했습니다.\n잠시 후 다시 시도해 주세요.');
-            return;
-        }
+    // 기존 참가자 수정: 실명은 secrets(adminNames)에서, 딜량·소갯말은 공개 뷰 값 그대로.
+    // (0012 이후 뷰가 팀장 포함 전원의 딜량·소갯말을 실제값으로 주므로 별도 조회가 필요 없다.)
+    const openEdit = (p: Participant) => {
         setEditForm({
             p_token: p.p_token,
             real_name: adminNames[p.p_token] ?? '',
             tier: p.tier,
-            avg_damage: String(data.avg_damage ?? ''),
-            intro: data.intro ?? '',
+            avg_damage: String(p.avg_damage),
+            intro: p.intro,
         });
         setEditOpen(true);
     };
