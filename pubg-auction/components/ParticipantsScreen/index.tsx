@@ -121,17 +121,34 @@ export default function ParticipantsScreen({ isAdmin, revealNames }: { isAdmin: 
                         {Array.from({ length: SLOT_COUNT }).map((_, i) => {
                             const tier = getTierBySlot(i);
                             const p = participants.find((part) => part.slot_index === i);
+                            // 빈 칸만 클릭으로 등록. 점유된 칸은 클릭 대상이 아니고 '수정' 배지만 누른다
+                            // (점유 칸까지 clickable 로 두면 아무 동작 없는 죽은 포커스가 64개 생긴다).
                             const cellClass = `${styles.cell} ${styles[`tier${tier}`]} ${p ? '' : styles.clickable}`;
                             return (
-                                <div key={i} className={cellClass} {...clickable(() => handleCellClick(i), p ? `${nameOf(p)}` : `${tier}티어 빈 자리에 등록`)}>
+                                <div
+                                    key={i}
+                                    className={cellClass}
+                                    {...(p ? {} : clickable(() => handleCellClick(i), `${tier}티어 빈 자리에 등록`))}
+                                >
                                     {p ? (
                                         <>
                                             <span className={styles.name}>{nameOf(p)}</span>
                                             <span className={styles.dmg}>{p.avg_damage ?? '—'}</span>
+                                            {/* 배지 클릭은 셀로 전파하지 않도록 이벤트를 직접 다룬다.
+                                                (clickable 헬퍼는 이벤트를 안 받아 stopPropagation 을 못 하므로 인라인) */}
                                             <div
                                                 className={styles.editBadge}
-                                                {...clickable(() => handleEditParticipant(p, i), `${nameOf(p)} 수정`)}
-                                                onClickCapture={(e) => e.stopPropagation()}
+                                                role="button"
+                                                tabIndex={0}
+                                                aria-label={`${nameOf(p)} 수정`}
+                                                onClick={(e) => { e.stopPropagation(); handleEditParticipant(p, i); }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleEditParticipant(p, i);
+                                                    }
+                                                }}
                                             >
                                                 수정
                                             </div>
