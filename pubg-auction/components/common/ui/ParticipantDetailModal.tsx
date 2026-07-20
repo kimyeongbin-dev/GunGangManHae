@@ -3,7 +3,7 @@
 // 렌더: SnakeScreen/DrawScreen에서 카드·셀을 클릭했을 때.
 // 진행자가 현재 차례 팀에 지명할 수 있는 상황이면 snakePick으로 '지명' 버튼을 받아 노출한다.
 // realName이 있으면(진행자 실명모드) 비제이명까지 표시.
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { getState } from '@/lib/toast';
 import styles from './modal.module.css';
 import fonts from '../../typography.module.css';
@@ -23,6 +23,13 @@ export default function ParticipantDetailModal({ target, realName, onClose, snak
     // 주 액션은 화면에 실제로 떠 있는 버튼 하나뿐이다: 미배정이면 '지명', 이미 배정됐으면 '지명 취소'.
     // (둘은 동시에 뜨지 않는다. 취소는 다시 지명하면 원상복구라 Enter에 걸어도 위험하지 않다)
     const primaryAction = snakePick?.onPick ?? onCancelPick ?? null;
+
+    // ★ 열릴 때 포커스를 모달로 가져온다. 안 그러면 이 팝업을 연 그리드 셀/이름(clickable)이 포커스를
+    //   계속 쥐고, 그 요소의 onKeyDown 이 Enter 를 stopPropagation 으로 삼켜 아래 window 리스너까지
+    //   도달하지 못한다(Esc 는 clickable 이 처리 안 해 통과 → Esc 만 되던 증상).
+    const boxRef = useRef<HTMLDivElement>(null);
+    useEffect(() => { boxRef.current?.focus(); }, []);
+
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if (getState().confirms.length) return;
@@ -39,7 +46,7 @@ export default function ParticipantDetailModal({ target, realName, onClose, snak
 
     return (
         <div className={styles.modalOverlay} onClick={onClose}>
-            <div className={styles.detailModalContent} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="참가자 상세 정보">
+            <div ref={boxRef} tabIndex={-1} className={styles.detailModalContent} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="참가자 상세 정보">
                 <button className={styles.closeButton} onClick={onClose}>×</button>
 
                 {/* 핵심 정보 상단 배치 */}

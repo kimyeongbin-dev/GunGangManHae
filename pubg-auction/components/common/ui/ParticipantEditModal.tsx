@@ -1,6 +1,7 @@
 // components/common/ui/ParticipantEditModal.tsx
 // [렌더링] 진행자 전용 참가자 등록/수정/삭제 모달 (익명은 '익명 만들기'로 자동 생성)
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getState } from '@/lib/toast';
 import styles from './modal.module.css';
 import fonts from '../../typography.module.css';
 import type { ModalForm } from '../types';
@@ -29,19 +30,32 @@ export default function ParticipantEditModal({ initialForm, masked, onSave, onDe
         if (ok) onClose();
     };
 
-    // Enter=저장 / Esc=취소. 단, 소갯말(textarea)에서 Enter는 줄바꿈이어야 하므로 가로챈다.
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Escape') {
-            onClose();
-        } else if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
-            e.preventDefault();
-            handleSave();
-        }
-    };
+    // Enter=저장 / Esc=취소.
+    // ★ window 리스너로 처리한다 — 예전엔 onKeyDown 을 modalContent div 에 달아, 모달을 막 열어
+    //   입력칸에 포커스가 없을 때는 키가 그 div 에 도달하지 않아 Esc/Enter 가 먹지 않았다.
+    // 예외:
+    //   · 소갯말(textarea)의 Enter 는 줄바꿈이어야 하므로 저장하지 않는다.
+    //   · 버튼에 포커스가 있으면 그 버튼이 Enter 를 처리하도록 양보(중복 실행 방지).
+    //   · 삭제 확인창이 떠 있으면 Toaster 가 캡처 단계에서 먼저 처리하므로 여기선 관여하지 않는다.
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (getState().confirms.length) return;
+            const tag = (e.target as HTMLElement)?.tagName;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                onClose();
+            } else if (e.key === 'Enter' && tag !== 'TEXTAREA' && tag !== 'BUTTON') {
+                e.preventDefault();
+                onSave(form).then((ok) => { if (ok) onClose(); });
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [form, onSave, onClose]);
 
     return (
         <div className={styles.modal} onClick={onClose}>
-            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} onKeyDown={handleKeyDown} role="dialog" aria-modal="true" aria-label="참가자 등록/수정">
+            <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="참가자 등록/수정">
                 <h3>{form.p_token ? '참가자 수정' : '참가자 등록'}</h3>
                 {/* 비밀번호 타입 입력(비제이명 마스킹)이 form 밖에 있으면 크롬이 경고 → form으로 감싼다. */}
                 <form onSubmit={(e) => e.preventDefault()}>
@@ -51,6 +65,7 @@ export default function ParticipantEditModal({ initialForm, masked, onSave, onDe
                         <input
                             type={showName ? 'text' : 'password'}
                             autoComplete="off"
+                            autoFocus
                             placeholder="예: 홍길동"
                             className={`${styles.formInput} ${styles.nameInput}`}
                             value={form.real_name}
@@ -88,9 +103,9 @@ export default function ParticipantEditModal({ initialForm, masked, onSave, onDe
                 </form>
 
                 <div className={styles.modalButtons}>
-                    <button onClick={handleSave} className={styles.saveBtn}>저장</button>
-                    {form.p_token && <button onClick={handleDelete} className={styles.deleteBtn}>삭제</button>}
-                    <button onClick={onClose} className={styles.cancelBtn}>취소</button>
+                    <button type="button" onClick={handleSave} className={styles.saveBtn}>저장</button>
+                    {form.p_token && <button type="button" onClick={handleDelete} className={styles.deleteBtn}>삭제</button>}
+                    <button type="button" onClick={onClose} className={styles.cancelBtn}>취소</button>
                 </div>
             </div>
         </div>

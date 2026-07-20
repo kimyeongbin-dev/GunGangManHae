@@ -20,6 +20,9 @@
 
 /* ===== 참가자 상세 팝업 ===== */
 
+.detailModalContent:focus {
+    outline: none; /* 열릴 때 포커스를 받되(키 처리용) 포커스 링은 숨긴다 */
+}
 .detailModalContent {
     padding: var(--space-10);
     position: relative;
